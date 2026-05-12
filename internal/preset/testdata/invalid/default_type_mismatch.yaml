@@ -1,0 +1,9 @@
+folio_version: "0.1"
+id: type-mismatch
+version: 1.0.0
+inputs:
+  - name: count
+    type: number
+    default: "not-a-number"
+files:
+  source: ./files

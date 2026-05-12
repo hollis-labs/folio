@@ -1,0 +1,9 @@
+folio_version: "0.1"
+id: with-post-render
+version: 1.0.0
+files:
+  source: ./files
+post_render:
+  blueprint: ./hooks/bootstrap.hadron.yaml
+  inputs:
+    project_dir: "{{ .target }}"

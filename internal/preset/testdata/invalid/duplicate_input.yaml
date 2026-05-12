@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: dup-input
+version: 1.0.0
+inputs:
+  - name: project_name
+    type: string
+  - name: project_name
+    type: string
+files:
+  source: ./files

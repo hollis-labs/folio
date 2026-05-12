@@ -1,0 +1,8 @@
+folio_version: "0.1"
+id: reserved
+version: 1.0.0
+inputs:
+  - name: target
+    type: string
+files:
+  source: ./files

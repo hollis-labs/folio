@@ -1,0 +1,5 @@
+folio_version: "0.1"
+id: escape
+version: 1.0.0
+files:
+  source: ../../etc

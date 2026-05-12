@@ -1,0 +1,6 @@
+folio_version: "0.1"
+id: bad-suffix
+version: 1.0.0
+files:
+  source: ./files
+  template_suffix: tmpl

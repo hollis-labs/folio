@@ -1,0 +1,9 @@
+folio_version: "0.1"
+id: bad-pattern
+version: 1.0.0
+inputs:
+  - name: name
+    type: string
+    pattern: "[unclosed"
+files:
+  source: ./files

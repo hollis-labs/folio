@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: comp-collide
+version: 1.0.0
+inputs:
+  - name: project_name
+    type: string
+computed:
+  project_name: "{{ .inputs.project_name | lower }}"
+files:
+  source: ./files
