@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hollis-labs/folio/internal/compose"
 	"github.com/hollis-labs/folio/internal/manifest"
 	"github.com/hollis-labs/folio/internal/preset"
 	"github.com/hollis-labs/folio/internal/render"
@@ -278,7 +279,7 @@ func (s *Service) LoadPreset(id string) (*LoadedPreset, error) {
 		}
 	}
 	if s.userDir != "" {
-		entry, err := s.findUserPreset(id)
+		entry, err := s.findUserPreset(id, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -312,12 +313,12 @@ func (s *Service) loadFromSubFS(parent fs.FS, sub, source, resolved string) (*Lo
 	return &LoadedPreset{Preset: p, FS: presetFS, Source: source, ResolvedPath: resolved}, nil
 }
 
-// findUserPreset scans s.userDir for a directory matching "<id>@*" and
-// returns the entry name of the highest-versioned match, or "" if none.
-//
-// v0 picks the lexicographically-largest tag; full semver comparison
-// arrives with the v0.x multi-version layout.
-func (s *Service) findUserPreset(id string) (string, error) {
+// findUserPreset scans s.userDir for "<id>@*" directories and returns the
+// entry name (e.g., "base@1.2.0") of the highest matching version. When
+// constraint is non-nil, only versions satisfying it are considered;
+// otherwise the highest version overall wins. Returns "" if no directory
+// matches the id at all, or no version satisfies a supplied constraint.
+func (s *Service) findUserPreset(id string, constraint *compose.Constraint) (string, error) {
 	entries, err := os.ReadDir(s.userDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -326,7 +327,8 @@ func (s *Service) findUserPreset(id string) (string, error) {
 		return "", newErr(ErrInternal, fmt.Sprintf("read user dir %s", s.userDir), err)
 	}
 	prefix := id + "@"
-	best := ""
+	versions := make([]string, 0)
+	entryByVersion := map[string]string{}
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
@@ -335,11 +337,29 @@ func (s *Service) findUserPreset(id string) (string, error) {
 		if !strings.HasPrefix(name, prefix) {
 			continue
 		}
-		if name > best {
-			best = name
-		}
+		v := strings.TrimPrefix(name, prefix)
+		versions = append(versions, v)
+		entryByVersion[v] = name
 	}
-	return best, nil
+	if len(versions) == 0 {
+		return "", nil
+	}
+	c := compose.MatchAny()
+	if constraint != nil {
+		c = *constraint
+	}
+	picked, err := compose.ResolveVersion(c, versions)
+	if err != nil {
+		if constraint == nil {
+			// Defensive: MatchAny never fails for non-empty versions, but
+			// keep the no-match-as-not-found sentinel for the top-level path.
+			return "", nil
+		}
+		return "", newErr(ErrPresetNotFound,
+			fmt.Sprintf("no user-dir version of %q satisfies constraint %s", id, constraint),
+			err)
+	}
+	return entryByVersion[picked], nil
 }
 
 // prepareRender resolves the preset, applies type-checked input defaults,
