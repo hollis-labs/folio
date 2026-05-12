@@ -629,6 +629,19 @@ func coerceInput(in preset.Input, val any) (any, error) {
 			return out, nil
 		case []string:
 			return v, nil
+		case string:
+			// CLI flag passes lists as comma-separated strings. Mirror the
+			// historical CLI-side coerceForCLI behavior here so undeclared
+			// inputs flowing through to composed layers (which the CLI
+			// resolver doesn't see at the top level) coerce correctly.
+			if v == "" {
+				return []string{}, nil
+			}
+			parts := strings.Split(v, ",")
+			for i, p := range parts {
+				parts[i] = strings.TrimSpace(p)
+			}
+			return parts, nil
 		default:
 			return nil, newErr(ErrInputInvalid, fmt.Sprintf("input %q is not a list: %v", in.Name, val), nil)
 		}
@@ -647,15 +660,14 @@ func checkNumberBounds(in preset.Input, v float64) error {
 	return nil
 }
 
-// resolveComputed renders each computed[key] template against ctx (with
-// the live computed map already wired so cross-references resolve in
-// alphabetic key order). For v0 this is enough; topological dependency
-// resolution can land later if a preset needs it.
 // resolveComputed renders each computed[key] template against ctx in
 // sorted-key order, returning a fresh map of all resolved values. The
 // working map is seeded from ctx.Computed so prior values (e.g. from
 // earlier composed layers) remain visible to templates in this layer.
 // Within a layer, sorted-key order lets later keys reference earlier ones.
+// Topological dependency resolution within a layer can land later if a
+// preset declares cross-key references that the alphabetic order can't
+// satisfy.
 func resolveComputed(p *preset.Preset, ctx render.Context) (map[string]any, error) {
 	out := make(map[string]any, len(ctx.Computed)+len(p.Computed))
 	for k, v := range ctx.Computed {

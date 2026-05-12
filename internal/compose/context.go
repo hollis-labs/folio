@@ -64,15 +64,13 @@ func ScopeVarsForLayer(
 
 // MergeComputed combines per-layer computed maps in apply order. On key
 // collision, the later (higher-indexed) layer wins — parallels the
-// same-path file overwrite policy. Within each layer the input map is
-// iterated in insertion order; this function only orders ACROSS layers.
+// same-path file overwrite policy. Within each layer, keys are iterated in
+// sorted order so map-iteration nondeterminism never affects the output
+// (per-layer computed values are themselves produced in sorted-key order
+// by service.resolveComputed). This function only orders ACROSS layers.
 func MergeComputed(layers []map[string]any) map[string]any {
 	out := map[string]any{}
 	for _, layer := range layers {
-		// Iterate keys in sorted order so map-iteration nondeterminism does
-		// not affect the output for layers that legitimately collide within
-		// themselves. (Per-layer computed values are themselves produced in
-		// sorted-key order by service.resolveComputed.)
 		for _, k := range sortedAnyKeys(layer) {
 			out[k] = layer[k]
 		}

@@ -185,6 +185,56 @@ func TestBuildGraph_LoaderError(t *testing.T) {
 	}
 }
 
+// TestBuildGraph_DiamondFirstParentEntry locks the first-parent-wins
+// behavior for diamond compose graphs: when the same composed preset id
+// is reached via two parents, the LayerRef.ComposeEntry records the
+// FIRST parent's entry (declared-order encounter). Future work may detect
+// + warn/error when the same id appears under multiple parents with
+// conflicting vars: blocks; v0.2 just locks the choice.
+func TestBuildGraph_DiamondFirstParentEntry(t *testing.T) {
+	loader := &fakeLoader{presets: map[string]string{
+		"base":  fixturePreset("base"),
+		"mid_a": fixturePresetWithVars("mid_a", "base", `{license: "MIT"}`),
+		"mid_b": fixturePresetWithVars("mid_b", "base", `{license: "Apache-2.0"}`),
+	}}
+	root := loadRoot(t, "top", "mid_a", "mid_b")
+
+	g, err := compose.BuildGraph(root, loader)
+	if err != nil {
+		t.Fatalf("BuildGraph: %v", err)
+	}
+	layers := g.LayerOrder()
+	var baseLayer *compose.LayerRef
+	for i := range layers {
+		if layers[i].Preset.ID == "base" {
+			baseLayer = &layers[i]
+			break
+		}
+	}
+	if baseLayer == nil {
+		t.Fatal("base layer not emitted")
+	}
+	// mid_a is declared first under top → base is reached via mid_a first.
+	// LayerRef.ComposeEntry should carry mid_a's entry (license=MIT).
+	if got := baseLayer.ComposeEntry.Vars["license"]; got != "MIT" {
+		t.Errorf("base.ComposeEntry.Vars[license] = %q, want MIT (first-parent mid_a's vars)", got)
+	}
+}
+
+// fixturePresetWithVars builds a one-compose-entry preset with a single
+// vars: override on the composed entry.
+func fixturePresetWithVars(id, composedID, varsYAML string) string {
+	var sb strings.Builder
+	sb.WriteString("folio_version: \"0.1\"\n")
+	fmt.Fprintf(&sb, "id: %s\n", id)
+	sb.WriteString("version: 1.0.0\n")
+	sb.WriteString("files:\n  source: ./files\n")
+	sb.WriteString("composes:\n")
+	fmt.Fprintf(&sb, "  - id: %s\n    version: \">=1.0,<2.0\"\n    source: local\n    path: ../%s\n    vars: %s\n",
+		composedID, composedID, varsYAML)
+	return sb.String()
+}
+
 func TestBuildGraph_NoComposes(t *testing.T) {
 	loader := &fakeLoader{}
 	root := loadRoot(t, "atom")
@@ -240,12 +290,12 @@ func TestResolveComposePath(t *testing.T) {
 			errSubstr: "escapes root",
 		},
 		{
-			name:    "absolute_escape",
-			parent:  "presets/x",
-			entry:   "/etc/passwd",
-			root:    "presets",
-			want:    "presets/x/etc/passwd", // path.Join treats the leading "/" as separator
-			wantErr: false,
+			name:      "absolute_path_rejected",
+			parent:    "presets/x",
+			entry:     "/etc/passwd",
+			root:      "presets",
+			wantErr:   true,
+			errSubstr: "absolute",
 		},
 		{
 			name:      "empty_entry",
@@ -261,6 +311,22 @@ func TestResolveComposePath(t *testing.T) {
 			entry:  "../base",
 			root:   ".",
 			want:   "base",
+		},
+		{
+			name:      "root_dot_escape_via_dotdot_rejected",
+			parent:    "go-package",
+			entry:     "../../sneaky",
+			root:      ".",
+			wantErr:   true,
+			errSubstr: "escapes the source root",
+		},
+		{
+			name:      "resolves_to_just_dotdot_rejected",
+			parent:    "a",
+			entry:     "../..",
+			root:      ".",
+			wantErr:   true,
+			errSubstr: "escapes",
 		},
 	}
 	for _, tc := range cases {

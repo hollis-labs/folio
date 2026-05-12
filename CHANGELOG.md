@@ -95,6 +95,36 @@ overlays (`README.md` describing the library, `cmd/smoke_compose/main.go`
 calling into the library). `.folio.yaml` records both layers in apply
 order. The generated tree passes `go vet`, `go build`, `go test` clean.
 
+### Fixed (review pass)
+
+- **Diamond compose-entry binding** — In compose graphs where the same
+  preset is reached via two parents, `LayerRef.ComposeEntry` now records
+  the FIRST parent's entry (declared-order encounter, locked in
+  BuildGraph). v0.2 does not support diamonds with conflicting `vars:`
+  blocks under different parents; the first-parent-wins choice avoids
+  the silently-arbitrary "last-stored" behavior the original rebuild
+  produced.
+- **`layerInputs` no longer leaks undeclared user keys** — The per-layer
+  render context is now `mergedInputs ∪ declared` only; raw user keys
+  that no layer declares (e.g., a typo like `--input bogous=value`) are
+  dropped after the per-layer `resolveInputs` filter, preventing them
+  from reaching templates or `.folio.yaml` `inputs:`.
+- **`ResolveComposePath` tightened** — Rejects absolute entry paths
+  (leading `/`) and any cleaned result equal to `..` or starting with
+  `../`, regardless of root. Previously the root=`"."` short-circuit
+  could let traversal escapes through to a downstream `fs.Sub` failure.
+- **`coerceInput` accepts comma-strings for `list[string]`** — Now that
+  the CLI passes undeclared `--input` pairs through verbatim, the
+  service-side coercer needs to accept the same comma-separated string
+  shape the CLI's `coerceForCLI` used to handle. Empty string → empty
+  list; trims each split part.
+- **Cross-layer "ignored input" warning noise suppressed** — When a
+  user-supplied `--input` key IS declared on SOME layer in the compose
+  chain, `resolveInputs`'s `"input X is not declared by preset Y
+  (ignored)"` warning is suppressed for the layers that don't own it.
+  Single-layer use is unaffected; genuine typos (key declared nowhere)
+  still warn.
+
 ### Out of scope (still deferred)
 
 - `folio sync` + diff UI.
@@ -105,6 +135,8 @@ order. The generated tree passes `go vet`, `go build`, `go test` clean.
 - Cycle/depth error formatting beyond preset ids (no file:line yet).
 - Topological dependency resolution within a single layer's `computed:`
   block (alphabetic ordering still serves).
+- Diamond compose detection + warning when the same composed id appears
+  under multiple parents with conflicting `vars:` blocks.
 
 ## [0.1.0] — 2026-05-12
 

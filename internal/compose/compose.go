@@ -43,6 +43,16 @@ type LayerRef struct {
 	// directory. The service uses this with render.RenderTree.
 	FS fs.FS
 
+	// ComposeEntry is the composes[] entry that introduced this layer (the
+	// zero value for the root). When the same composed preset id is reached
+	// via multiple parents (diamonds), BuildGraph dedupes on first encounter
+	// and records the FIRST parent's entry here — so consumers like
+	// service.composedLayers can read the canonical vars: block without
+	// rebuilding their own id → entry map. Diamonds with conflicting vars:
+	// blocks under different parents are not supported in v0.2; the first-
+	// parent-wins choice is captured in plan §4 (decisions).
+	ComposeEntry preset.ComposeEntry
+
 	// CallerVars carries the scoped inputs for this layer (caller inputs
 	// with per-entry overrides applied). Populated by ScopeVarsForLayer in
 	// P3 — left nil by BuildGraph.

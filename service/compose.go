@@ -3,11 +3,32 @@ package service
 import (
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"github.com/hollis-labs/folio/internal/compose"
 	"github.com/hollis-labs/folio/internal/preset"
 	"github.com/hollis-labs/folio/internal/render"
 )
+
+// ignoredInputDeclaredElsewhere reports whether a resolveInputs warning of
+// the form `input "X" is not declared by preset "Y" (ignored)` names an
+// input key X that IS declared somewhere in the compose chain. Those
+// warnings are appropriate for single-preset use; for composition they
+// just narrate the expected cross-layer flow and add noise.
+func ignoredInputDeclaredElsewhere(warning string, declaredAnywhere map[string]struct{}) bool {
+	prefix := `input "`
+	if !strings.HasPrefix(warning, prefix) {
+		return false
+	}
+	rest := warning[len(prefix):]
+	endQuote := strings.IndexByte(rest, '"')
+	if endQuote < 0 {
+		return false
+	}
+	key := rest[:endQuote]
+	_, ok := declaredAnywhere[key]
+	return ok
+}
 
 // layer is one preset layer in apply order, paired with the per-layer
 // render.Context. Produced by composedLayers; consumed by the New/Plan
@@ -132,17 +153,17 @@ func (s *Service) composedLayers(loaded *LoadedPreset, callerCtx render.Context)
 		layerRefs = g.LayerOrder()
 	}
 
-	// Collect every composes[] entry across the graph so each non-root
-	// layer can look up its caller's overrides. Within a parent's composes
-	// list, an entry references a single composed preset id; collisions
-	// (same composed id reached twice via different parents) take the last
-	// declared entry — diamonds dedupe upstream via BuildGraph, so this
-	// only triggers when the user nests the same id under multiple parents
-	// with conflicting vars: blocks (a v0.3 concern).
-	entryFor := make(map[string]preset.ComposeEntry, len(layerRefs))
+	// Build the union of every key declared by ANY layer in the graph. We
+	// use this to suppress resolveInputs's "input X is not declared by
+	// preset Y (ignored)" warnings when the key IS declared somewhere in
+	// the chain — those warnings are appropriate noise for single-preset
+	// use but spurious for composition (the user provides inputs spanning
+	// multiple layers, and each layer's per-input check flags every key
+	// it doesn't own).
+	declaredAnywhere := make(map[string]struct{})
 	for _, lr := range layerRefs {
-		for _, e := range lr.Preset.Composes {
-			entryFor[e.ID] = e
+		for _, in := range lr.Preset.Inputs {
+			declaredAnywhere[in.Name] = struct{}{}
 		}
 	}
 
@@ -156,12 +177,12 @@ func (s *Service) composedLayers(loaded *LoadedPreset, callerCtx render.Context)
 		if lr.Preset.ID == loaded.Preset.ID {
 			scopedInputs = callerCtx.Inputs
 		} else {
-			entry, ok := entryFor[lr.Preset.ID]
-			if !ok {
-				return nil, nil, newErr(ErrInternal,
-					fmt.Sprintf("no compose entry recorded for layer %s", lr.Preset.ID), nil)
-			}
-			v, err := compose.ScopeVarsForLayer(callerCtx, entry.Vars, lr.Preset)
+			// lr.ComposeEntry is the entry that introduced this layer
+			// during BuildGraph's first-encounter visit. Diamond presets
+			// reached via multiple parents bind to the first parent's
+			// entry (declared order in the parent's composes:) — the
+			// canonical choice locked at the graph level.
+			v, err := compose.ScopeVarsForLayer(callerCtx, lr.ComposeEntry.Vars, lr.Preset)
 			if err != nil {
 				return nil, nil, newErr(ErrPresetInvalid,
 					"scope vars for "+lr.Preset.ID, err)
@@ -173,20 +194,20 @@ func (s *Service) composedLayers(loaded *LoadedPreset, callerCtx render.Context)
 		if err != nil {
 			return nil, nil, err
 		}
-		allWarnings = append(allWarnings, warnings...)
-
-		// Merge precedence (highest wins):
-		//   1. declared — this layer's typed/defaulted values for keys it owns.
-		//   2. scopedInputs — caller-perspective inputs for this layer (raw,
-		//      possibly overridden per-key by the entry's vars: block).
-		//   3. mergedInputs — running accumulator of prior layers' resolved
-		//      values, so later layers' templates can reference earlier
-		//      layers' defaulted/typed inputs (symmetric with computed).
-		layerInputs := make(map[string]any, len(mergedInputs)+len(scopedInputs)+len(declared))
-		for k, v := range mergedInputs {
-			layerInputs[k] = v
+		for _, w := range warnings {
+			if !ignoredInputDeclaredElsewhere(w, declaredAnywhere) {
+				allWarnings = append(allWarnings, w)
+			}
 		}
-		for k, v := range scopedInputs {
+
+		// Each layer's render context sees prior layers' resolved/defaulted
+		// values plus this layer's own typed values. scopedInputs is the
+		// INPUT to resolveInputs and intentionally NOT merged into the
+		// final layerInputs — that prevents undeclared, unvalidated raw
+		// user keys (e.g., a typo like --input bogous=value) from leaking
+		// into templates and the .folio.yaml manifest.
+		layerInputs := make(map[string]any, len(mergedInputs)+len(declared))
+		for k, v := range mergedInputs {
 			layerInputs[k] = v
 		}
 		for k, v := range declared {

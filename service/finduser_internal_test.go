@@ -3,10 +3,47 @@ package service
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/hollis-labs/folio/internal/compose"
+	"github.com/hollis-labs/folio/internal/preset"
 )
+
+// TestCoerceInput_ListStringFromString covers the v0.2 path where the CLI
+// passes through undeclared --input pairs verbatim. For inputs declared as
+// list[string] on a composed layer, the value reaches coerceInput as a
+// comma-separated string (the CLI's coerceForCLI only runs for top-level
+// declared inputs). coerceInput must accept and split it.
+func TestCoerceInput_ListStringFromString(t *testing.T) {
+	in := preset.Input{Name: "tags", Type: "list[string]"}
+
+	cases := []struct {
+		name string
+		val  any
+		want []string
+	}{
+		{"comma_separated", "a,b,c", []string{"a", "b", "c"}},
+		{"trimmed", " a , b , c ", []string{"a", "b", "c"}},
+		{"single", "solo", []string{"solo"}},
+		{"empty", "", []string{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := coerceInput(in, tc.val)
+			if err != nil {
+				t.Fatalf("coerceInput: %v", err)
+			}
+			gotSlice, ok := got.([]string)
+			if !ok {
+				t.Fatalf("coerceInput returned %T, want []string", got)
+			}
+			if !reflect.DeepEqual(gotSlice, tc.want) {
+				t.Errorf("coerceInput(%q) = %v, want %v", tc.val, gotSlice, tc.want)
+			}
+		})
+	}
+}
 
 // TestFindUserPreset_ConstraintResolution exercises findUserPreset against a
 // multi-version user dir, covering both the no-constraint (highest overall)

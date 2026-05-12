@@ -69,8 +69,8 @@ func BuildGraph(root *LoadResult, loader Loader) (*Graph, error) {
 	colors := map[string]int{}
 	stack := make([]string, 0, 8)
 
-	var walk func(node *LoadResult, depth int) error
-	walk = func(node *LoadResult, depth int) error {
+	var walk func(node *LoadResult, intro preset.ComposeEntry, depth int) error
+	walk = func(node *LoadResult, intro preset.ComposeEntry, depth int) error {
 		if depth > MaxComposeDepth {
 			chain := append([]string{}, stack...)
 			chain = append(chain, node.Preset.ID)
@@ -93,7 +93,7 @@ func BuildGraph(root *LoadResult, loader Loader) (*Graph, error) {
 			if err != nil {
 				return fmt.Errorf("load composes[%s] from %s: %w", entry.ID, id, err)
 			}
-			if err := walk(child, depth+1); err != nil {
+			if err := walk(child, entry, depth+1); err != nil {
 				return err
 			}
 		}
@@ -102,13 +102,14 @@ func BuildGraph(root *LoadResult, loader Loader) (*Graph, error) {
 			Source:       node.Source,
 			ResolvedPath: node.ResolvedPath,
 			FS:           node.FS,
+			ComposeEntry: intro,
 		})
 		colors[id] = colorDone
 		stack = stack[:len(stack)-1]
 		return nil
 	}
 
-	if err := walk(root, 0); err != nil {
+	if err := walk(root, preset.ComposeEntry{}, 0); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -119,14 +120,26 @@ func BuildGraph(root *LoadResult, loader Loader) (*Graph, error) {
 // supplied root. All arguments use forward-slash path syntax (io/fs); OS
 // callers translate before/after with filepath.
 //
-// An empty entry path is an error. Path traversal that escapes the root
-// (e.g., "../../escape" from inside the root) returns an error citing the
-// resolved target.
+// Rejects:
+//   - empty entryPath.
+//   - absolute entryPath (leading "/") — composes:[].path is parent-relative.
+//   - cleaned path equal to ".." or starting with "../" — these escape any
+//     root, including root="." (where the explicit prefix check would
+//     otherwise allow them).
+//   - cleaned path outside a non-trivial root (e.g., "../../escape" from
+//     inside "presets/x" against root="presets" resolves to "escape").
 func ResolveComposePath(parentDir, entryPath, root string) (string, error) {
 	if entryPath == "" {
 		return "", fmt.Errorf("compose path is empty")
 	}
+	if strings.HasPrefix(entryPath, "/") {
+		return "", fmt.Errorf("compose path %q is absolute; composes[].path is parent-relative", entryPath)
+	}
 	cleaned := path.Clean(path.Join(parentDir, entryPath))
+	if cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", fmt.Errorf("compose path %q escapes the source root (resolves to %q)",
+			entryPath, cleaned)
+	}
 	rootClean := path.Clean(root)
 	if rootClean == "." || rootClean == "" {
 		return cleaned, nil

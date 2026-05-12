@@ -103,6 +103,41 @@ func TestNew_ComposerOverSample(t *testing.T) {
 	}
 }
 
+// TestNew_ComposerDoesNotLeakUndeclaredInputs is the regression for the
+// review comment on layerInputs: a `--input` for a key that no layer in
+// the compose chain declares MUST NOT appear in the rendered manifest's
+// inputs section. The undeclared key flows through resolveInputs's
+// "ignored" warning path (which composedLayers suppresses for keys
+// declared elsewhere — see ignoredInputDeclaredElsewhere) and is dropped
+// from layerInputs.
+func TestNew_ComposerDoesNotLeakUndeclaredInputs(t *testing.T) {
+	svc := newTestService(t)
+	target := filepath.Join(t.TempDir(), "out")
+
+	_, err := svc.New(service.NewOptions{
+		PresetID:  "composer",
+		TargetDir: target,
+		Inputs: map[string]any{
+			"project_name":         "smoke_compose",
+			"github_owner":         "chrispian",
+			"description":          "compose smoke",
+			"package_name":         "greeter",
+			"bogus_undeclared_key": "leak-canary",
+		},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	mf, err := manifest.Read(target)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if _, present := mf.Inputs["bogus_undeclared_key"]; present {
+		t.Errorf("manifest.inputs leaked undeclared key: %+v", mf.Inputs)
+	}
+}
+
 func TestPlan_ComposerOverSample(t *testing.T) {
 	svc := newTestService(t)
 	target := filepath.Join(t.TempDir(), "out")
