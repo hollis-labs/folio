@@ -9,10 +9,12 @@ re-rendered later (and, in a future release, synced when the preset evolves).
 
 ## Status
 
-v0.1.0 — vertical slice. Single bundled `base` preset, `folio new` /
-`folio plan` / `folio preset validate`. Composition (`composes:`), sync,
-post-render Hadron hooks, and MCP / HTTP surfaces are deliberately deferred;
-see [`CHANGELOG.md`](./CHANGELOG.md) for the full deferred list.
+v0.2 — composition slice. Two bundled presets: the minimal `base` (a Go
+module scaffold) and `go-package` (an `internal/<pkg>/` library layered on
+top of `base`). `folio new` / `folio plan` / `folio preset validate` all
+understand `composes:`. Sync, post-render Hadron hooks, federated git-URL
+preset sources, and MCP / HTTP surfaces are deliberately deferred; see
+[`CHANGELOG.md`](./CHANGELOG.md) for the full deferred list.
 
 ## Quickstart
 
@@ -42,6 +44,70 @@ for everything required.
 | `folio plan <preset> <dir>` | Dry-run — print resolved inputs + computed values + planned file list. No writes. |
 | `folio preset validate <preset-dir>` | Run the v0 validation rule set against `<preset-dir>/preset.yaml`. |
 | `folio sync` / `folio inspect` / `folio preset list` / `folio preset show` | Reserved — print "not yet implemented in v0" and exit 1. |
+
+## Composing presets
+
+A preset can layer on top of other presets by declaring `composes:`. Each
+entry names a composed preset by id, pins its version via a semver
+constraint, and points at its directory. The composing preset's files then
+overlay the composed preset's tree in declared order — later layers
+overwrite earlier ones on the same relative path.
+
+```yaml
+# presets/go-package/preset.yaml
+folio_version: "0.1"
+id: go-package
+version: 1.0.0
+
+composes:
+  - id: base
+    version: ">=0.1,<1.0"
+    source: local
+    path: ../base
+
+inputs:
+  - name: package_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+```
+
+The bundled `go-package` preset does exactly this — it layers on `base`
+to add `internal/<package_name>/` library code and overwrites the base
+`README.md` + `cmd/<project>/main.go` with a library-first stub.
+
+```sh
+folio new go-package /tmp/folio-compose \
+  --input project_name=smoke_compose \
+  --input github_owner=chrispian \
+  --input package_name=greeter \
+  --non-interactive
+
+cd /tmp/folio-compose
+go vet ./...
+go test ./...
+```
+
+The resulting `.folio.yaml` records both layers in apply order under
+`presets:`, and each file's `preset:` field names the layer that produced
+it (the last writer on overwrites).
+
+**Constraint syntax.** npm-style operators are supported: `>=`, `<=`, `>`,
+`<`, exact, `*`, tilde (`~1.2.3` → `>=1.2.3,<1.3.0`), caret (`^1.2.3` →
+`>=1.2.3,<2.0.0`), AND-via-comma (`>=1.0,<2.0`), OR-via-pipe (`^1.0 || ^2.0`).
+Partial versions canonicalize (`1.0` → `1.0.0`).
+
+**Var scoping.** A composed preset inherits the caller's `.inputs.*` by
+default. To override a per-key value for the composed layer, declare it in
+the entry's `vars:` block — the value is a Go template rendered against
+the *caller's* render context (so `{{.inputs.foo}}` inside a `vars:` value
+resolves to the caller's input named `foo`). Templates inside the composed
+preset's own files render against the layer's own resolved inputs +
+computed values, with prior layers' values visible.
+
+**Limits.** v0.2 supports `source: local` only (git URL sources land in
+v1.1+). Compose DAG depth is capped at 8; direct or transitive cycles
+produce a path-bearing error.
 
 ## Inputs resolution
 
