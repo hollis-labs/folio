@@ -12,7 +12,11 @@
 // internal/compose does not write files or know about render.TreeOptions.
 package compose
 
-import "io/fs"
+import (
+	"io/fs"
+
+	"github.com/hollis-labs/folio/internal/preset"
+)
 
 // MaxComposeDepth caps the depth of transitive composes: walks. Exceeding the
 // cap produces a path-bearing error during BuildGraph.
@@ -25,16 +29,10 @@ const DefaultSource = "local"
 // LayerRef is one preset layer in apply order. Populated by Graph.LayerOrder
 // and consumed by the service render loop.
 type LayerRef struct {
-	// PresetID is the layered preset's id (composed preset's id, not the
-	// caller's). Top-level preset has its own LayerRef as the last element.
-	PresetID string
+	// Preset is the loaded preset for this layer.
+	Preset *preset.Preset
 
-	// Version is the resolved semver version of this layer's preset (the
-	// version actually loaded, after constraint resolution).
-	Version string
-
-	// Source is the composes[].source value used to load this layer (or
-	// DefaultSource for the top-level root). v0.2: always "local".
+	// Source is the loader-assigned source label ("bundled" | "local").
 	Source string
 
 	// ResolvedPath is the path the loader resolved for this layer, recorded
@@ -46,6 +44,7 @@ type LayerRef struct {
 	FS fs.FS
 
 	// CallerVars carries the scoped inputs for this layer (caller inputs
-	// with per-entry overrides applied). Populated by ScopeVarsForLayer.
+	// with per-entry overrides applied). Populated by ScopeVarsForLayer in
+	// P3 — left nil by BuildGraph.
 	CallerVars map[string]any
 }
