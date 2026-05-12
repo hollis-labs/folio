@@ -136,21 +136,53 @@ type LoadedPreset struct {
 	FS           fs.FS
 	Source       string // "bundled" or "local"
 	ResolvedPath string // identifier suitable for manifest.PresetRef.ResolvedPath
+
+	// Compose-time context. Used by composedLayers to resolve relative
+	// `composes[].path` entries against the parent preset's directory.
+	// sourceRootFS is the un-Sub'd root FS (the bundled embed.FS or
+	// os.DirFS(userDir)); sourceRoot is the path prefix within that FS
+	// where presets live ("presets" for the production bundled FS, "."
+	// for user-dir or tests using bundledRoot="."). parentDir is this
+	// preset's directory expressed in the sourceRootFS path space.
+	sourceRootFS fs.FS
+	sourceRoot   string
+	parentDir    string
 }
 
 // New runs the full generate pipeline against the bundled or user preset
 // matching opts.PresetID, writes the resulting tree into opts.TargetDir,
-// and emits a .folio.yaml manifest alongside it.
+// and emits a .folio.yaml manifest alongside it. For composing presets
+// (composes: declared), each layer renders in apply order; same-path
+// writes overwrite earlier layers silently (last-writer-wins).
 func (s *Service) New(opts NewOptions) (NewResult, error) {
-	loaded, ctx, warnings, err := s.prepareRender(opts)
+	loaded, callerCtx, warnings, err := s.prepareRender(opts)
 	if err != nil {
 		return NewResult{}, err
 	}
-	now := ctx.Now
+	now := callerCtx.Now
 
-	tree, err := s.renderTree(loaded, ctx)
+	layers, composeWarnings, err := s.composedLayers(loaded, callerCtx)
 	if err != nil {
 		return NewResult{}, err
+	}
+	warnings = append(warnings, composeWarnings...)
+
+	rendered := map[string]renderedFile{}
+	orderedPaths := []string{}
+	for _, l := range layers {
+		tree, err := s.renderTree(
+			&LoadedPreset{Preset: l.Preset, FS: l.FS},
+			l.Ctx,
+		)
+		if err != nil {
+			return NewResult{}, err
+		}
+		for _, f := range tree.Files {
+			if _, exists := rendered[f.RelPath]; !exists {
+				orderedPaths = append(orderedPaths, f.RelPath)
+			}
+			rendered[f.RelPath] = renderedFile{File: f, PresetID: l.Preset.ID}
+		}
 	}
 
 	if err := ensureTargetReady(opts.TargetDir); err != nil {
@@ -162,17 +194,13 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 
 	var files []FileResult
 	manifestFiles := map[string]manifest.FileRecord{}
-
-	for _, f := range tree.Files {
+	for _, rp := range orderedPaths {
+		rf := rendered[rp]
+		f := rf.File
 		dst := filepath.Join(opts.TargetDir, filepath.FromSlash(f.RelPath))
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", filepath.Dir(dst)), err)
 		}
-		// Binary files (preset.files.binary_extensions matches) get written
-		// verbatim — LF normalisation would corrupt them. manifest.Digest
-		// applies the same LF-normalisation guard internally so binary
-		// digests stay stable across re-renders without needing CRLF
-		// fixups in the first place.
 		var bytesOnDisk []byte
 		if f.IsBinary {
 			bytesOnDisk = f.Content
@@ -190,28 +218,44 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 			IsTemplate: f.IsTemplate,
 		})
 		manifestFiles[f.RelPath] = manifest.FileRecord{
-			Preset:      loaded.Preset.ID,
+			Preset:      rf.PresetID,
 			DigestAtGen: digest,
 		}
 	}
+
+	presetRefs := make([]manifest.PresetRef, 0, len(layers))
+	syncPresets := make([]manifest.PresetRef, 0, len(layers))
+	for _, l := range layers {
+		presetRefs = append(presetRefs, manifest.PresetRef{
+			ID:           l.Preset.ID,
+			Version:      l.Preset.Version,
+			Source:       l.Source,
+			ResolvedPath: l.ResolvedPath,
+		})
+		syncPresets = append(syncPresets, manifest.PresetRef{
+			ID:      l.Preset.ID,
+			Version: l.Preset.Version,
+		})
+	}
+
+	// .folio.yaml records the TOP-LEVEL layer's inputs (the user-facing
+	// config). Each composed layer derived its inputs from these via
+	// compose.ScopeVarsForLayer at generation time; storing the derived
+	// values would obscure what the user actually set.
+	rootLayer := layers[len(layers)-1]
 
 	m := manifest.Manifest{
 		FolioVersion: "0.1",
 		GeneratedAt:  now,
 		Generator:    "folio/" + s.folioVersion,
-		Presets: []manifest.PresetRef{{
-			ID:           loaded.Preset.ID,
-			Version:      loaded.Preset.Version,
-			Source:       loaded.Source,
-			ResolvedPath: loaded.ResolvedPath,
-		}},
-		Inputs:   ctx.Inputs,
-		Computed: ctx.Computed,
-		Files:    manifestFiles,
+		Presets:      presetRefs,
+		Inputs:       rootLayer.Ctx.Inputs,
+		Computed:     rootLayer.Ctx.Computed,
+		Files:        manifestFiles,
 		SyncHistory: []manifest.SyncEvent{{
 			At:        now,
 			Operation: "init",
-			Presets:   []manifest.PresetRef{{ID: loaded.Preset.ID, Version: loaded.Preset.Version}},
+			Presets:   syncPresets,
 		}},
 	}
 	if err := manifest.Write(opts.TargetDir, m); err != nil {
@@ -223,18 +267,41 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 
 // Plan executes the same pipeline as New but writes nothing. Useful for
 // `folio plan` (dry-run) and for agents that want to verify what would
-// happen before committing.
+// happen before committing. For composing presets, layers iterate in
+// apply order with last-writer-wins on path collisions.
 func (s *Service) Plan(opts NewOptions) (PlanResult, error) {
-	loaded, ctx, warnings, err := s.prepareRender(opts)
+	loaded, callerCtx, warnings, err := s.prepareRender(opts)
 	if err != nil {
 		return PlanResult{}, err
 	}
-	tree, err := s.renderTree(loaded, ctx)
+
+	layers, composeWarnings, err := s.composedLayers(loaded, callerCtx)
 	if err != nil {
 		return PlanResult{}, err
 	}
+	warnings = append(warnings, composeWarnings...)
+
+	rendered := map[string]renderedFile{}
+	orderedPaths := []string{}
+	for _, l := range layers {
+		tree, err := s.renderTree(
+			&LoadedPreset{Preset: l.Preset, FS: l.FS},
+			l.Ctx,
+		)
+		if err != nil {
+			return PlanResult{}, err
+		}
+		for _, f := range tree.Files {
+			if _, exists := rendered[f.RelPath]; !exists {
+				orderedPaths = append(orderedPaths, f.RelPath)
+			}
+			rendered[f.RelPath] = renderedFile{File: f, PresetID: l.Preset.ID}
+		}
+	}
+
 	var files []PlanFile
-	for _, f := range tree.Files {
+	for _, rp := range orderedPaths {
+		f := rendered[rp].File
 		preview := string(f.Content)
 		if len(preview) > PlanPreviewLimit {
 			preview = preview[:PlanPreviewLimit] + "\n... (truncated)"
@@ -246,10 +313,12 @@ func (s *Service) Plan(opts NewOptions) (PlanResult, error) {
 			IsTemplate: f.IsTemplate,
 		})
 	}
+
+	rootLayer := layers[len(layers)-1]
 	return PlanResult{
 		Files:    files,
-		Inputs:   ctx.Inputs,
-		Computed: ctx.Computed,
+		Inputs:   rootLayer.Ctx.Inputs,
+		Computed: rootLayer.Ctx.Computed,
 		Warnings: warnings,
 	}, nil
 }
@@ -275,7 +344,14 @@ func (s *Service) LoadPreset(id string) (*LoadedPreset, error) {
 	if s.bundledFS != nil {
 		sub := pathJoin(s.bundledRoot, id)
 		if entry, err := fs.Stat(s.bundledFS, sub); err == nil && entry.IsDir() {
-			return s.loadFromSubFS(s.bundledFS, sub, "bundled", "bundled:"+sub)
+			lp, err := s.loadFromSubFS(s.bundledFS, sub, "bundled", "bundled:"+sub)
+			if err != nil {
+				return nil, err
+			}
+			lp.sourceRootFS = s.bundledFS
+			lp.sourceRoot = s.bundledRoot
+			lp.parentDir = sub
+			return lp, nil
 		}
 	}
 	if s.userDir != "" {
@@ -285,7 +361,14 @@ func (s *Service) LoadPreset(id string) (*LoadedPreset, error) {
 		}
 		if entry != "" {
 			full := filepath.Join(s.userDir, entry)
-			return s.loadFromSubFS(os.DirFS(full), ".", "local", full)
+			lp, err := s.loadFromSubFS(os.DirFS(full), ".", "local", full)
+			if err != nil {
+				return nil, err
+			}
+			lp.sourceRootFS = os.DirFS(s.userDir)
+			lp.sourceRoot = "."
+			lp.parentDir = entry
+			return lp, nil
 		}
 	}
 	return nil, newErr(ErrPresetNotFound, fmt.Sprintf("no preset with id %q in bundled or user sources", id), nil)
@@ -362,8 +445,15 @@ func (s *Service) findUserPreset(id string, constraint *compose.Constraint) (str
 	return entryByVersion[picked], nil
 }
 
-// prepareRender resolves the preset, applies type-checked input defaults,
-// computes derived vars, and returns the render context.
+// prepareRender loads the preset and builds the bare render context — it
+// does NOT resolve inputs or computed values, since for composing presets
+// each layer needs its own resolution against its own declared schema.
+// composedLayers handles per-layer resolveInputs + resolveComputed for both
+// the composing and single-preset paths.
+//
+// The returned ctx.Inputs holds the user's raw, unfiltered input map (the
+// caller-side `.inputs.*` perspective used by compose.ScopeVarsForLayer
+// when overriding per-key for inner layers). ctx.Computed is empty.
 func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context, []string, error) {
 	if opts.TargetDir == "" {
 		return nil, render.Context{}, nil, newErr(ErrInputInvalid, "target directory is required", nil)
@@ -380,13 +470,8 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 
 	now := s.now()
 
-	inputs, warnings, err := resolveInputs(loaded.Preset, opts.Inputs)
-	if err != nil {
-		return nil, render.Context{}, nil, err
-	}
-
 	ctx := render.Context{
-		Inputs:   inputs,
+		Inputs:   opts.Inputs,
 		Computed: map[string]any{},
 		Target:   abs,
 		Preset:   render.PresetInfo{ID: loaded.Preset.ID, Version: loaded.Preset.Version},
@@ -394,12 +479,7 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 		Now:      now,
 	}
 
-	computed, err := resolveComputed(loaded.Preset, ctx)
-	if err != nil {
-		return nil, render.Context{}, nil, err
-	}
-	ctx.Computed = computed
-
+	var warnings []string
 	if loaded.Preset.PostRender != nil && loaded.Preset.PostRender.Blueprint != "" {
 		warnings = append(warnings, "post_render is not implemented in v0; the hook will be skipped at generation time")
 	}
@@ -571,9 +651,18 @@ func checkNumberBounds(in preset.Input, v float64) error {
 // the live computed map already wired so cross-references resolve in
 // alphabetic key order). For v0 this is enough; topological dependency
 // resolution can land later if a preset needs it.
+// resolveComputed renders each computed[key] template against ctx in
+// sorted-key order, returning a fresh map of all resolved values. The
+// working map is seeded from ctx.Computed so prior values (e.g. from
+// earlier composed layers) remain visible to templates in this layer.
+// Within a layer, sorted-key order lets later keys reference earlier ones.
 func resolveComputed(p *preset.Preset, ctx render.Context) (map[string]any, error) {
+	out := make(map[string]any, len(ctx.Computed)+len(p.Computed))
+	for k, v := range ctx.Computed {
+		out[k] = v
+	}
 	if len(p.Computed) == 0 {
-		return map[string]any{}, nil
+		return out, nil
 	}
 	keys := make([]string, 0, len(p.Computed))
 	for k := range p.Computed {
@@ -581,7 +670,6 @@ func resolveComputed(p *preset.Preset, ctx render.Context) (map[string]any, erro
 	}
 	sort.Strings(keys)
 
-	out := map[string]any{}
 	ctx.Computed = out
 	for _, k := range keys {
 		tpl := p.Computed[k]
