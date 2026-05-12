@@ -1,7 +1,7 @@
 folio_version: "0.1"
 id: base
 version: 0.1.0
-description: Minimal Go project layout (v0 placeholder — fleshed out in P6)
+description: Minimal Go project layout — folio's atom preset
 author: hollis-labs
 license: MIT
 
@@ -15,10 +15,27 @@ inputs:
     type: string
     required: true
     description: GitHub username or org
+  - name: description
+    type: string
+    default: ""
+    description: One-line project description
 
 computed:
   module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
+  year: "{{ .now.Year }}"
 
 files:
   source: ./files
   template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    - glob: "Makefile"
+      policy: overwrite
+    - glob: ".github/workflows/**"
+      policy: overwrite
+    - glob: "internal/**"
+      policy: skip
+    - glob: "README.md"
+      policy: three-way
