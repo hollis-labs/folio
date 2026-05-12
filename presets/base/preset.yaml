@@ -1,0 +1,24 @@
+folio_version: "0.1"
+id: base
+version: 0.1.0
+description: Minimal Go project layout (v0 placeholder — fleshed out in P6)
+author: hollis-labs
+license: MIT
+
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go module name (lowercase, snake_case)
+  - name: github_owner
+    type: string
+    required: true
+    description: GitHub username or org
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl

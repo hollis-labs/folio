@@ -16,8 +16,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `internal/manifest` — `.folio.yaml` writer/reader with SHA-256 per-file digests
   computed after LF newline normalization.
 - `service/` — canonical Go API. CLI wraps it; future MCP/HTTP do the same.
-- `cmd/folio` — Cobra CLI with `huh` interactive prompts and `--non-interactive`
-  flag for agent/CI use.
+- `cmd/folio` — Cobra CLI with `huh` interactive prompts, `--non-interactive`
+  flag for agent/CI use, and reserved-stub commands (`sync`, `inspect`,
+  `preset list`, `preset show`) that announce "not yet implemented in v0".
 - `presets/base/` — bundled minimal Go-project preset, embedded via `embed.FS`.
 
 [Unreleased]: https://github.com/hollis-labs/folio/compare/v0.1.0...HEAD
