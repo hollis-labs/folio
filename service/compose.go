@@ -148,6 +148,7 @@ func (s *Service) composedLayers(loaded *LoadedPreset, callerCtx render.Context)
 
 	out := make([]layer, 0, len(layerRefs))
 	mergedComputed := map[string]any{}
+	mergedInputs := map[string]any{}
 	var allWarnings []string
 
 	for _, lr := range layerRefs {
@@ -174,20 +175,24 @@ func (s *Service) composedLayers(loaded *LoadedPreset, callerCtx render.Context)
 		}
 		allWarnings = append(allWarnings, warnings...)
 
-		// Merge: keys declared on this preset get the typed/defaulted
-		// values from resolveInputs; keys NOT declared on this preset
-		// flow through from the caller verbatim. This is what makes
-		// inherit-by-default work for composing presets that declare
-		// only their own additions and rely on a composed layer's
-		// schema for the rest (e.g., go-package declares package_name
-		// while project_name/github_owner remain caller-supplied).
-		layerInputs := make(map[string]any, len(scopedInputs)+len(declared))
+		// Merge precedence (highest wins):
+		//   1. declared — this layer's typed/defaulted values for keys it owns.
+		//   2. scopedInputs — caller-perspective inputs for this layer (raw,
+		//      possibly overridden per-key by the entry's vars: block).
+		//   3. mergedInputs — running accumulator of prior layers' resolved
+		//      values, so later layers' templates can reference earlier
+		//      layers' defaulted/typed inputs (symmetric with computed).
+		layerInputs := make(map[string]any, len(mergedInputs)+len(scopedInputs)+len(declared))
+		for k, v := range mergedInputs {
+			layerInputs[k] = v
+		}
 		for k, v := range scopedInputs {
 			layerInputs[k] = v
 		}
 		for k, v := range declared {
 			layerInputs[k] = v
 		}
+		mergedInputs = layerInputs
 
 		lctx := render.Context{
 			Inputs:   layerInputs,

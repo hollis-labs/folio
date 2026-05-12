@@ -37,6 +37,12 @@ func Run(args []string, bundledFS fs.FS, version string) int {
 	if err == nil {
 		return ExitOK
 	}
+	// SilenceErrors keeps cobra quiet so the CLI controls its own
+	// presentation; we still need to surface the error to the user.
+	var ce *cancelledError
+	if !errors.As(err, &ce) {
+		fmt.Fprintln(os.Stderr, "folio: "+err.Error())
+	}
 	return exitCodeFor(err)
 }
 
