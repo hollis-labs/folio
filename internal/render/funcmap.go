@@ -65,7 +65,12 @@ func FuncMap(ctx Context) template.FuncMap {
 		// --- default / fallback ---
 		"default":  defaultFn,
 		"coalesce": coalesce,
-		"ternary":  func(yes, no any, cond bool) any { if cond { return yes }; return no },
+		"ternary": func(yes, no any, cond bool) any {
+			if cond {
+				return yes
+			}
+			return no
+		},
 
 		// --- quoting / escaping ---
 		"quote":      strconv.Quote,

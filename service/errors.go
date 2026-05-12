@@ -47,13 +47,3 @@ func (e *Error) Unwrap() error { return e.Err }
 func newErr(code ErrorCode, msg string, err error) *Error {
 	return &Error{Code: code, Message: msg, Err: err}
 }
-
-func errorCode(err error) ErrorCode {
-	if err == nil {
-		return ""
-	}
-	if e, ok := err.(*Error); ok {
-		return e.Code
-	}
-	return ErrInternal
-}

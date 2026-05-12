@@ -54,6 +54,7 @@ linters:
     gosec:
       excludes:
         - G104   # covered by errcheck
+        - G306   # WriteFile perms — folio writes user-readable manifests + project files; 0o644 is intentional
 
     govet:
       enable-all: true

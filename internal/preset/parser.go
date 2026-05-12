@@ -105,6 +105,10 @@ func childNode(parent *yaml.Node, seg string) *yaml.Node {
 		return nil
 	}
 	switch parent.Kind {
+	case yaml.DocumentNode, yaml.ScalarNode, yaml.AliasNode:
+		// Document is unwrapped by the caller; scalars and aliases have no
+		// addressable children. Treat as not-found.
+		return nil
 	case yaml.MappingNode:
 		for i := 0; i+1 < len(parent.Content); i += 2 {
 			k := parent.Content[i]

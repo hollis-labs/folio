@@ -201,7 +201,8 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 			}
 			rendered, err := RenderString(string(raw), ctx)
 			if err != nil {
-				if re, ok := err.(*Error); ok && re.File == "" {
+				var re *Error
+				if errors.As(err, &re) && re.File == "" {
 					re.File = p
 				}
 				return err

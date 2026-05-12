@@ -60,11 +60,11 @@ type Input struct {
 
 // Files describes how preset content maps to the rendered target tree.
 type Files struct {
-	Source           string   `yaml:"source"`
-	TemplateSuffix   string   `yaml:"template_suffix,omitempty"`
-	Ignore           []string `yaml:"ignore,omitempty"`
-	BinaryExtensions []string `yaml:"binary_extensions,omitempty"`
-	LargeFilesAllowed bool    `yaml:"large_files_allowed,omitempty"`
+	Source            string   `yaml:"source"`
+	TemplateSuffix    string   `yaml:"template_suffix,omitempty"`
+	Ignore            []string `yaml:"ignore,omitempty"`
+	BinaryExtensions  []string `yaml:"binary_extensions,omitempty"`
+	LargeFilesAllowed bool     `yaml:"large_files_allowed,omitempty"`
 }
 
 // ComposeEntry references another preset to be applied as a layer.

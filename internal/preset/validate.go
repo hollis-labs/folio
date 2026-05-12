@@ -71,10 +71,10 @@ func (r Result) OK() bool { return len(r.Errors) == 0 }
 
 // Regexes used by validation rules. Compiled once at package init.
 var (
-	idPattern         = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
-	identPattern      = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-	semverPattern     = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
-	folioVerPattern   = regexp.MustCompile(`^0\.\d+$`)
+	idPattern       = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	identPattern    = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+	semverPattern   = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+	folioVerPattern = regexp.MustCompile(`^0\.\d+$`)
 )
 
 // reservedInputNames collides with template context root keys; using one as

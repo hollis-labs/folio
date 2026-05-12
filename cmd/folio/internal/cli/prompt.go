@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/huh"
@@ -124,7 +125,7 @@ func mapHuhErr(err error) error {
 	if err == nil {
 		return nil
 	}
-	if err == huh.ErrUserAborted {
+	if errors.Is(err, huh.ErrUserAborted) {
 		return &cancelledError{Err: err}
 	}
 	return fmt.Errorf("prompt: %w", err)
@@ -137,7 +138,7 @@ func mapHuhErr(err error) error {
 func validatePattern(s, pattern string) error {
 	re, err := regexpCompile(pattern)
 	if err != nil {
-		return fmt.Errorf("preset pattern %q invalid: %v", pattern, err)
+		return fmt.Errorf("preset pattern %q invalid: %w", pattern, err)
 	}
 	if !re.MatchString(s) {
 		return fmt.Errorf("must match %s", pattern)
