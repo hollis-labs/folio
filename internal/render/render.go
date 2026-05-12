@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 	"text/template"
@@ -40,17 +40,20 @@ func RenderString(in string, ctx Context) (string, error) {
 	return buf.String(), nil
 }
 
-// TreeOptions parameterises a RenderTree call. SourceDir must be the
-// absolute path to the preset's template tree (typically `<presetRoot>/files`).
+// TreeOptions parameterises a RenderTree call. Source must be an fs.FS
+// rooted at the preset's template tree (typically `<presetRoot>/files`).
+// Pass os.DirFS for on-disk presets and a sub-FS of an embed.FS for
+// bundled presets — the engine is unaware of which it received.
 type TreeOptions struct {
-	// SourceDir is the absolute path to the template source directory.
-	SourceDir string
+	// Source is the filesystem to walk. It must be rooted at the template
+	// tree, NOT at the preset directory itself.
+	Source fs.FS
 	// TemplateSuffix marks files that should be rendered (e.g. ".tmpl").
 	// Files without this suffix are copied literally. Defaults to
 	// DefaultTemplateSuffix when empty.
 	TemplateSuffix string
-	// Ignore is a list of glob patterns (filepath.Match syntax) applied to
-	// each file's path relative to SourceDir. Matches are skipped entirely.
+	// Ignore is a list of glob patterns (path.Match syntax) applied to
+	// each file's path relative to the FS root. Matches are skipped.
 	Ignore []string
 	// BinaryExtensions forces literal copy regardless of TemplateSuffix.
 	// Entries should include the leading dot, e.g. ".png".
@@ -120,15 +123,15 @@ func (e *Error) Unwrap() error { return e.Err }
 //     - binary extension or no template suffix → literal copy
 //     - template suffix → render content, strip suffix
 func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
-	if opts.SourceDir == "" {
-		return TreeResult{}, errors.New("render: TreeOptions.SourceDir is required")
+	if opts.Source == nil {
+		return TreeResult{}, errors.New("render: TreeOptions.Source is required")
 	}
-	info, err := os.Stat(opts.SourceDir)
+	root, err := fs.Stat(opts.Source, ".")
 	if err != nil {
-		return TreeResult{}, fmt.Errorf("render: stat source dir: %w", err)
+		return TreeResult{}, fmt.Errorf("render: stat source: %w", err)
 	}
-	if !info.IsDir() {
-		return TreeResult{}, fmt.Errorf("render: source %q is not a directory", opts.SourceDir)
+	if !root.IsDir() {
+		return TreeResult{}, fmt.Errorf("render: source root is not a directory")
 	}
 
 	suffix := opts.suffix()
@@ -139,49 +142,36 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 
 	var files []RenderedFile
 
-	walkErr := filepath.WalkDir(opts.SourceDir, func(abs string, d fs.DirEntry, walkErr error) error {
+	walkErr := fs.WalkDir(opts.Source, ".", func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if abs == opts.SourceDir {
+		if p == "." {
 			return nil
 		}
 
-		relSource, err := filepath.Rel(opts.SourceDir, abs)
-		if err != nil {
-			return fmt.Errorf("render: rel %q: %w", abs, err)
-		}
-
-		// Apply path-template rendering segment by segment. We render whole
-		// path; matching against ignore globs is done on the source-relative
-		// (pre-render) path to keep glob authoring intuitive.
+		// Ignore-glob match runs against the source-relative (pre-render)
+		// path so authors author globs against the on-disk layout, not the
+		// templated output.
 		for _, pat := range opts.Ignore {
-			matched, err := filepath.Match(pat, relSource)
+			matched, err := path.Match(pat, p)
 			if err != nil {
 				return fmt.Errorf("render: invalid ignore glob %q: %w", pat, err)
 			}
 			if matched {
 				if d.IsDir() {
-					return filepath.SkipDir
+					return fs.SkipDir
 				}
 				return nil
 			}
 		}
 
-		// Refuse symlinks anywhere under source (security; matches the
-		// validation rule documented in preset-yaml-validation-v0.md §5).
-		if d.Type()&fs.ModeSymlink != 0 {
-			return fmt.Errorf("render: symlink not allowed under preset source: %s", relSource)
-		}
-
-		renderedRel, err := renderPath(relSource, ctx)
+		renderedRel, err := renderPath(p, ctx)
 		if err != nil {
-			return &Error{Phase: "path", File: relSource, Err: err}
+			return &Error{Phase: "path", File: p, Err: err}
 		}
 
 		if d.IsDir() {
-			// We do not record directories as RenderedFile entries; the
-			// writer will mkdir as needed from the file paths.
 			return nil
 		}
 
@@ -190,7 +180,7 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 			mode = fi.Mode().Perm()
 		}
 
-		ext := strings.ToLower(filepath.Ext(renderedRel))
+		ext := strings.ToLower(path.Ext(renderedRel))
 		_, isBinary := binaryExts[ext]
 
 		var (
@@ -201,14 +191,14 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 
 		switch {
 		case !isBinary && strings.HasSuffix(renderedRel, suffix):
-			raw, err := os.ReadFile(abs)
+			raw, err := fs.ReadFile(opts.Source, p)
 			if err != nil {
-				return fmt.Errorf("render: read template %s: %w", relSource, err)
+				return fmt.Errorf("render: read template %s: %w", p, err)
 			}
 			rendered, err := RenderString(string(raw), ctx)
 			if err != nil {
 				if re, ok := err.(*Error); ok && re.File == "" {
-					re.File = relSource
+					re.File = p
 				}
 				return err
 			}
@@ -216,9 +206,9 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 			content = []byte(rendered)
 			isTemplate = true
 		default:
-			raw, err := os.ReadFile(abs)
+			raw, err := fs.ReadFile(opts.Source, p)
 			if err != nil {
-				return fmt.Errorf("render: read file %s: %w", relSource, err)
+				return fmt.Errorf("render: read file %s: %w", p, err)
 			}
 			outPath = renderedRel
 			content = raw
@@ -226,7 +216,7 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 		}
 
 		files = append(files, RenderedFile{
-			RelPath:    filepath.ToSlash(outPath),
+			RelPath:    outPath,
 			Content:    content,
 			IsTemplate: isTemplate,
 			Mode:       mode,
@@ -241,25 +231,31 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 	return TreeResult{Files: files}, nil
 }
 
+// DirFSAt returns an fs.FS rooted at the given absolute directory. Tiny
+// wrapper around os.DirFS so callers in this package don't have to import
+// "os" just for the constructor.
+func DirFSAt(dir string) fs.FS { return os.DirFS(dir) }
+
 // renderPath renders any template directives inside path segments,
-// preserving the separator structure. Empty path = empty result.
+// preserving the separator structure. Empty path = empty result. Paths are
+// forward-slash because fs.FS uses forward slashes.
 func renderPath(rel string, ctx Context) (string, error) {
 	if rel == "" {
 		return "", nil
 	}
-	parts := strings.Split(filepath.ToSlash(rel), "/")
-	for i, p := range parts {
-		if !strings.Contains(p, "{{") {
+	parts := strings.Split(rel, "/")
+	for i, seg := range parts {
+		if !strings.Contains(seg, "{{") {
 			continue
 		}
-		out, err := RenderString(p, ctx)
+		out, err := RenderString(seg, ctx)
 		if err != nil {
 			return "", err
 		}
 		if strings.ContainsAny(out, "/\\") {
-			return "", fmt.Errorf("path segment %q rendered to contain a path separator: %q", p, out)
+			return "", fmt.Errorf("path segment %q rendered to contain a path separator: %q", seg, out)
 		}
 		parts[i] = out
 	}
-	return filepath.FromSlash(strings.Join(parts, "/")), nil
+	return strings.Join(parts, "/"), nil
 }

@@ -31,7 +31,7 @@ func TestRenderTree_Basics(t *testing.T) {
 		t.Fatal(err)
 	}
 	opts := render.TreeOptions{
-		SourceDir:      src,
+		Source:         render.DirFSAt(src),
 		TemplateSuffix: ".tmpl",
 		Ignore:         []string{"*.example"},
 	}
@@ -80,8 +80,8 @@ func TestRenderTree_Basics(t *testing.T) {
 func TestRenderTree_Sorted(t *testing.T) {
 	src, _ := filepath.Abs(filepath.Join("testdata", "preset", "files"))
 	res, err := render.RenderTree(render.TreeOptions{
-		SourceDir: src,
-		Ignore:    []string{"*.example"},
+		Source: render.DirFSAt(src),
+		Ignore: []string{"*.example"},
 	}, treeContext())
 	if err != nil {
 		t.Fatalf("RenderTree: %v", err)
@@ -97,11 +97,11 @@ func TestRenderTree_FrozenNow(t *testing.T) {
 	// Two renders with the same ctx produce identical timestamps.
 	src, _ := filepath.Abs(filepath.Join("testdata", "preset", "files"))
 	ctx := treeContext()
-	a, err := render.RenderTree(render.TreeOptions{SourceDir: src, Ignore: []string{"*.example"}}, ctx)
+	a, err := render.RenderTree(render.TreeOptions{Source: render.DirFSAt(src), Ignore: []string{"*.example"}}, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := render.RenderTree(render.TreeOptions{SourceDir: src, Ignore: []string{"*.example"}}, ctx)
+	b, err := render.RenderTree(render.TreeOptions{Source: render.DirFSAt(src), Ignore: []string{"*.example"}}, ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,11 +116,11 @@ func TestRenderTree_FrozenNow(t *testing.T) {
 }
 
 func TestRenderTree_BadSource(t *testing.T) {
-	if _, err := render.RenderTree(render.TreeOptions{SourceDir: ""}, treeContext()); err == nil {
-		t.Fatal("expected error for empty SourceDir")
+	if _, err := render.RenderTree(render.TreeOptions{Source: nil}, treeContext()); err == nil {
+		t.Fatal("expected error for nil Source")
 	}
-	if _, err := render.RenderTree(render.TreeOptions{SourceDir: "/path/does/not/exist"}, treeContext()); err == nil {
-		t.Fatal("expected error for missing SourceDir")
+	if _, err := render.RenderTree(render.TreeOptions{Source: render.DirFSAt("/path/does/not/exist")}, treeContext()); err == nil {
+		t.Fatal("expected error for missing Source")
 	}
 }
 
