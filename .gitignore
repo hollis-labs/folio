@@ -1,0 +1,28 @@
+# Binaries
+/folio
+/cmd/folio/folio
+*.exe
+*.test
+*.out
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.env
+.env.local

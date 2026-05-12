@@ -1,0 +1,113 @@
+# folio — golangci-lint configuration (v2 format)
+#
+# Philosophy (matches the hollis-labs Go portfolio baseline):
+#   - Catch real bugs, not style nits
+#   - Zero false-positive tolerance on CI
+#   - Errors only — no warnings that train developers to ignore output
+#
+# Usage:
+#   golangci-lint run --new   # lint only changed lines
+#   golangci-lint run         # full lint
+
+version: "2"
+
+run:
+  go: "1.23"
+
+linters:
+  default: none
+  enable:
+    # --- Essential (catch real bugs) ---
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+
+    # --- Security ---
+    - gosec
+
+    # --- Style (minimal — errors, not opinions) ---
+    - revive
+    - misspell
+    - unconvert
+    - unparam
+
+    # --- Correctness ---
+    - exhaustive
+    - errorlint
+    - nilerr
+
+  settings:
+    errcheck:
+      exclude-functions:
+        - fmt.Print
+        - fmt.Println
+        - fmt.Printf
+        - fmt.Fprint
+        - fmt.Fprintln
+        - fmt.Fprintf
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gosec:
+      excludes:
+        - G104   # covered by errcheck
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+
+    misspell:
+      locale: US
+
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          disabled: true
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+          disabled: true
+        - name: var-declaration
+        - name: var-naming
+
+    staticcheck:
+      checks:
+        - "all"
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # Test files: relax a few rules for table-driven tests.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
