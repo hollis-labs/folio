@@ -7,7 +7,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/hollis-labs/folio"
@@ -15,9 +14,5 @@ import (
 )
 
 func main() {
-	exitCode := cli.Run(os.Args[1:], folio.BundledPresets, folio.Version)
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-	_ = fmt.Sprint // keep import set explicit for future hot-reload of formatting
+	os.Exit(cli.Run(os.Args[1:], folio.BundledPresets, folio.Version))
 }

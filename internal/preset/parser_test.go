@@ -31,8 +31,8 @@ func TestParse_FullPreset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse full: %v", err)
 	}
-	if len(p.Inputs) != 5 {
-		t.Fatalf("inputs = %d, want 5", len(p.Inputs))
+	if len(p.Inputs) != 6 {
+		t.Fatalf("inputs = %d, want 6", len(p.Inputs))
 	}
 	if p.Inputs[0].Name != "project_name" {
 		t.Errorf("inputs[0].name = %q, want project_name", p.Inputs[0].Name)
@@ -40,11 +40,14 @@ func TestParse_FullPreset(t *testing.T) {
 	if p.Inputs[0].Pattern == "" {
 		t.Error("inputs[0].pattern should be set")
 	}
-	if p.Inputs[3].Type != "enum" {
-		t.Errorf("inputs[3].type = %q, want enum", p.Inputs[3].Type)
+	if p.Inputs[1].Name != "github_owner" {
+		t.Errorf("inputs[1].name = %q, want github_owner", p.Inputs[1].Name)
 	}
-	if len(p.Inputs[3].Values) != 3 {
-		t.Errorf("inputs[3].values = %d, want 3", len(p.Inputs[3].Values))
+	if p.Inputs[4].Type != "enum" {
+		t.Errorf("inputs[4].type = %q, want enum", p.Inputs[4].Type)
+	}
+	if len(p.Inputs[4].Values) != 3 {
+		t.Errorf("inputs[4].values = %d, want 3", len(p.Inputs[4].Values))
 	}
 	if got := p.Computed["module_path"]; got == "" {
 		t.Error("computed.module_path should be set")

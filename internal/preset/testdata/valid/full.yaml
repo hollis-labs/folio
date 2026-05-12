@@ -13,6 +13,10 @@ inputs:
     description: Go module name
     min_length: 2
     max_length: 64
+  - name: github_owner
+    type: string
+    required: true
+    description: GitHub owner referenced by computed.module_path
   - name: with_cli
     type: bool
     default: false

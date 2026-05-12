@@ -83,6 +83,10 @@ func stubCmd(name string) *cobra.Command {
 // exitCodeFor maps service errors and Cobra usage errors to the documented
 // exit-code table.
 func exitCodeFor(err error) int {
+	var ce *cancelledError
+	if errors.As(err, &ce) {
+		return ExitCancelled
+	}
 	var se *service.Error
 	if errors.As(err, &se) {
 		switch se.Code {

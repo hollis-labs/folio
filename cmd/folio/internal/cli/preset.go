@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -33,7 +34,7 @@ func presetValidateCmd(bundledFS fs.FS, version string) *cobra.Command {
 				BundledRoot:  "presets",
 				FolioVersion: version,
 			})
-			res, p, err := svc.ValidatePreset(dir + "/preset.yaml")
+			res, p, err := svc.ValidatePreset(filepath.Join(dir, "preset.yaml"))
 			if err != nil {
 				return err
 			}

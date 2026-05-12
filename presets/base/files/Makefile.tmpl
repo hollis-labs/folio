@@ -1,0 +1,19 @@
+.PHONY: build install test vet lint clean
+
+build:
+	go build -o {{ .inputs.project_name }} ./cmd/{{ .inputs.project_name }}
+
+install:
+	go install ./cmd/{{ .inputs.project_name }}
+
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+lint:
+	golangci-lint run
+
+clean:
+	rm -f {{ .inputs.project_name }}

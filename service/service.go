@@ -167,14 +167,24 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", filepath.Dir(dst)), err)
 		}
-		normalised := manifest.NormalizeLineEndings(f.Content)
-		if err := os.WriteFile(dst, normalised, modeFor(f)); err != nil {
+		// Binary files (preset.files.binary_extensions matches) get written
+		// verbatim — LF normalisation would corrupt them. manifest.Digest
+		// applies the same LF-normalisation guard internally so binary
+		// digests stay stable across re-renders without needing CRLF
+		// fixups in the first place.
+		var bytesOnDisk []byte
+		if f.IsBinary {
+			bytesOnDisk = f.Content
+		} else {
+			bytesOnDisk = manifest.NormalizeLineEndings(f.Content)
+		}
+		if err := os.WriteFile(dst, bytesOnDisk, modeFor(f)); err != nil {
 			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("write %s", dst), err)
 		}
 		digest := manifest.Digest(f.Content)
 		files = append(files, FileResult{
 			Path:       f.RelPath,
-			Bytes:      int64(len(normalised)),
+			Bytes:      int64(len(bytesOnDisk)),
 			Digest:     digest,
 			IsTemplate: f.IsTemplate,
 		})

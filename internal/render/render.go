@@ -72,11 +72,15 @@ func (o TreeOptions) suffix() string {
 // RelPath is the path relative to the target directory after path-template
 // resolution and TemplateSuffix stripping. Content is the rendered (or
 // literal) file body. IsTemplate reports whether content was produced by
-// template evaluation (false for literal copies and binaries).
+// template evaluation (false for literal copies and binaries). IsBinary
+// is true when the file's extension matches BinaryExtensions; consumers
+// (e.g. the service-layer writer) use this to skip line-ending
+// normalisation that would corrupt binary content.
 type RenderedFile struct {
 	RelPath    string
 	Content    []byte
 	IsTemplate bool
+	IsBinary   bool
 	Mode       os.FileMode
 }
 
@@ -219,6 +223,7 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 			RelPath:    outPath,
 			Content:    content,
 			IsTemplate: isTemplate,
+			IsBinary:   isBinary,
 			Mode:       mode,
 		})
 		return nil
