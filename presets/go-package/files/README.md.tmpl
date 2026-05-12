@@ -1,0 +1,45 @@
+# {{ pascalCase .inputs.project_name }}
+
+{{ if .inputs.description }}{{ .inputs.description }}
+
+{{ end }}Module path: `{{ .computed.module_path }}`
+Library package: `{{ .computed.pkg_module_path }}`
+
+## Layout
+
+This project was generated from the `go-package` preset, which layers a
+single internal library on top of folio's `base` scaffold.
+
+```
+.
+├── cmd/{{ .inputs.project_name }}/      # CLI entry (stub; flesh out as needed)
+├── internal/{{ .inputs.package_name }}/ # Library code (importable in-module only)
+├── go.mod
+├── Makefile
+└── README.md (this file)
+```
+
+## Install
+
+```sh
+go install {{ .computed.module_path }}/cmd/{{ .inputs.project_name }}@latest
+```
+
+## Usage
+
+```sh
+{{ .inputs.project_name }}
+```
+
+## Development
+
+```sh
+make test       # go test ./...
+make vet        # go vet ./...
+make build      # build the binary
+make install    # install via go install
+```
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

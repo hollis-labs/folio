@@ -1,0 +1,16 @@
+// Command {{ .inputs.project_name }} is the CLI entrypoint for {{ pascalCase .inputs.project_name }}.
+//
+// This stub overwrites the base preset's main.go; the project is intended
+// to be a library first (see internal/{{ .inputs.package_name }}/) with the
+// CLI layer remaining minimal until needed.
+package main
+
+import (
+	"fmt"
+
+	"{{ .computed.module_path }}/internal/{{ .inputs.package_name }}"
+)
+
+func main() {
+	fmt.Println({{ .inputs.package_name }}.Hello())
+}
