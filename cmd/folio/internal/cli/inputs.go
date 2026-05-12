@@ -15,7 +15,7 @@ import (
 	"github.com/hollis-labs/folio/service"
 )
 
-// inputResolver materialises the final inputs map for service.New/Plan from
+// inputResolver materializes the final inputs map for service.New/Plan from
 // flag values + --inputs-file + environment variables, following the
 // resolution order in cli-prompt-flow-v0.md §2.
 type inputResolver struct {

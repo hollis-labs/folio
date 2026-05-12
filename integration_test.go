@@ -52,8 +52,8 @@ func TestIntegration_BundledBasePreset(t *testing.T) {
 	}
 	for _, p := range expected {
 		full := filepath.Join(target, filepath.FromSlash(p))
-		if _, err := os.Stat(full); err != nil {
-			t.Errorf("expected %s, missing: %v", p, err)
+		if _, statErr := os.Stat(full); statErr != nil {
+			t.Errorf("expected %s, missing: %v", p, statErr)
 		}
 	}
 

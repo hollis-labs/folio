@@ -91,7 +91,7 @@ type NewOptions struct {
 	Inputs map[string]any
 }
 
-// NewResult summarises a completed Service.New invocation. The manifest
+// NewResult summarizes a completed Service.New invocation. The manifest
 // returned is the one that was written to <TargetDir>/.folio.yaml.
 type NewResult struct {
 	Files    []FileResult
@@ -107,7 +107,7 @@ type FileResult struct {
 	IsTemplate bool
 }
 
-// PlanResult summarises a dry-run Service.Plan invocation. No writes occur;
+// PlanResult summarizes a dry-run Service.Plan invocation. No writes occur;
 // preview content is truncated at 2 KiB per file.
 type PlanResult struct {
 	Files    []PlanFile
@@ -141,7 +141,7 @@ type LoadedPreset struct {
 // matching opts.PresetID, writes the resulting tree into opts.TargetDir,
 // and emits a .folio.yaml manifest alongside it.
 func (s *Service) New(opts NewOptions) (NewResult, error) {
-	loaded, ctx, _, warnings, err := s.prepareRender(opts)
+	loaded, ctx, warnings, err := s.prepareRender(opts)
 	if err != nil {
 		return NewResult{}, err
 	}
@@ -224,7 +224,7 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 // `folio plan` (dry-run) and for agents that want to verify what would
 // happen before committing.
 func (s *Service) Plan(opts NewOptions) (PlanResult, error) {
-	loaded, ctx, _, warnings, err := s.prepareRender(opts)
+	loaded, ctx, warnings, err := s.prepareRender(opts)
 	if err != nil {
 		return PlanResult{}, err
 	}
@@ -344,25 +344,25 @@ func (s *Service) findUserPreset(id string) (string, error) {
 
 // prepareRender resolves the preset, applies type-checked input defaults,
 // computes derived vars, and returns the render context.
-func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context, []string, []string, error) {
+func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context, []string, error) {
 	if opts.TargetDir == "" {
-		return nil, render.Context{}, nil, nil, newErr(ErrInputInvalid, "target directory is required", nil)
+		return nil, render.Context{}, nil, newErr(ErrInputInvalid, "target directory is required", nil)
 	}
 	abs, err := filepath.Abs(opts.TargetDir)
 	if err != nil {
-		return nil, render.Context{}, nil, nil, newErr(ErrInputInvalid, fmt.Sprintf("resolve target %s", opts.TargetDir), err)
+		return nil, render.Context{}, nil, newErr(ErrInputInvalid, fmt.Sprintf("resolve target %s", opts.TargetDir), err)
 	}
 
 	loaded, err := s.LoadPreset(opts.PresetID)
 	if err != nil {
-		return nil, render.Context{}, nil, nil, err
+		return nil, render.Context{}, nil, err
 	}
 
 	now := s.now()
 
 	inputs, warnings, err := resolveInputs(loaded.Preset, opts.Inputs)
 	if err != nil {
-		return nil, render.Context{}, nil, nil, err
+		return nil, render.Context{}, nil, err
 	}
 
 	ctx := render.Context{
@@ -376,7 +376,7 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 
 	computed, err := resolveComputed(loaded.Preset, ctx)
 	if err != nil {
-		return nil, render.Context{}, nil, nil, err
+		return nil, render.Context{}, nil, err
 	}
 	ctx.Computed = computed
 
@@ -384,7 +384,7 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 		warnings = append(warnings, "post_render is not implemented in v0; the hook will be skipped at generation time")
 	}
 
-	return loaded, ctx, []string{abs}, warnings, nil
+	return loaded, ctx, warnings, nil
 }
 
 // renderTree builds the files-rooted sub-FS and delegates to render.RenderTree.

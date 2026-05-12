@@ -11,35 +11,6 @@ import (
 	"github.com/hollis-labs/folio/cmd/folio/internal/cli"
 )
 
-func bundledFS(t *testing.T) fs.FS {
-	t.Helper()
-	abs, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "presets"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &subFS{root: abs}
-}
-
-// subFS exposes the on-disk presets/ dir under the path layout the service
-// expects (root contains "<id>/preset.yaml"). The real bundled FS exposes
-// "presets/<id>/preset.yaml" with the same key.
-type subFS struct{ root string }
-
-func (s *subFS) Open(name string) (fs.File, error) {
-	const prefix = "presets"
-	if name == prefix {
-		return os.Open(s.root)
-	}
-	if strings.HasPrefix(name, prefix+"/") {
-		return os.Open(filepath.Join(s.root, strings.TrimPrefix(name, prefix+"/")))
-	}
-	if name == "." {
-		// fs.WalkDir starts from "." — return a one-entry virtual root.
-		return os.Open(s.root)
-	}
-	return nil, fs.ErrNotExist
-}
-
 func TestRun_PresetValidate(t *testing.T) {
 	dir, _ := filepath.Abs(filepath.Join("..", "..", "..", "..", "presets", "base"))
 	args := []string{"preset", "validate", dir}

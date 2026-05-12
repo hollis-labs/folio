@@ -95,9 +95,9 @@ type TreeResult struct {
 // execution fails. It carries the source file (when known) and the phase
 // the error originated in.
 type Error struct {
-	Phase   string
-	File    string
-	Err     error
+	Phase string
+	File  string
+	Err   error
 }
 
 func (e *Error) Error() string {

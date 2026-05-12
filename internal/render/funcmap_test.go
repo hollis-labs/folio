@@ -22,12 +22,12 @@ func renderString(t *testing.T, tpl string) string {
 func fixture() render.Context {
 	return render.Context{
 		Inputs: map[string]any{
-			"project_name":   "my_thing",
-			"github_owner":   "chrispian",
-			"description":    "  trim me  ",
-			"empty":          "",
-			"replicas":       3,
-			"tags":           []any{"alpha", "beta"},
+			"project_name": "my_thing",
+			"github_owner": "chrispian",
+			"description":  "  trim me  ",
+			"empty":        "",
+			"replicas":     3,
+			"tags":         []any{"alpha", "beta"},
 		},
 		Computed: map[string]any{
 			"module_path": "github.com/chrispian/my_thing",

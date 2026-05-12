@@ -9,8 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Write serialises m to <targetDir>/.folio.yaml. The encoder is configured
-// with 2-space indent and the default yaml.v3 behaviour of sorting map
+// Write serializes m to <targetDir>/.folio.yaml. The encoder is configured
+// with 2-space indent and the default yaml.v3 behavior of sorting map
 // keys alphabetically, so the same Manifest value produces byte-identical
 // output across calls (the property the round-trip test in writer_test.go
 // asserts).

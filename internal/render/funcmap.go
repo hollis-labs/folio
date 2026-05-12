@@ -39,7 +39,7 @@ func FuncMap(ctx Context) template.FuncMap {
 		"trim":       strings.TrimSpace,
 		"trimPrefix": func(prefix, s string) string { return strings.TrimPrefix(s, prefix) },
 		"trimSuffix": func(suffix, s string) string { return strings.TrimSuffix(s, suffix) },
-		"replace":    func(old, new, s string) string { return strings.ReplaceAll(s, old, new) },
+		"replace":    func(oldStr, newStr, s string) string { return strings.ReplaceAll(s, oldStr, newStr) },
 		"contains":   func(substr, s string) bool { return strings.Contains(s, substr) },
 		"hasPrefix":  func(prefix, s string) bool { return strings.HasPrefix(s, prefix) },
 		"hasSuffix":  func(suffix, s string) bool { return strings.HasSuffix(s, suffix) },

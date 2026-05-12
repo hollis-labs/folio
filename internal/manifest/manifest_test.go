@@ -63,9 +63,9 @@ func sampleManifest() manifest.Manifest {
 			"year":        2026,
 		},
 		Files: map[string]manifest.FileRecord{
-			"README.md":  {Preset: "base", DigestAtGen: manifest.Digest([]byte("# Smoke\n"))},
-			"go.mod":     {Preset: "base", DigestAtGen: manifest.Digest([]byte("module github.com/chrispian/smoke_test\n"))},
-			"Makefile":   {Preset: "base", DigestAtGen: manifest.Digest([]byte(".PHONY: build\nbuild:\n\tgo build ./...\n"))},
+			"README.md": {Preset: "base", DigestAtGen: manifest.Digest([]byte("# Smoke\n"))},
+			"go.mod":    {Preset: "base", DigestAtGen: manifest.Digest([]byte("module github.com/chrispian/smoke_test\n"))},
+			"Makefile":  {Preset: "base", DigestAtGen: manifest.Digest([]byte(".PHONY: build\nbuild:\n\tgo build ./...\n"))},
 		},
 		SyncHistory: []manifest.SyncEvent{{
 			At:        time.Date(2026, 5, 12, 15, 30, 0, 0, time.UTC),
@@ -151,7 +151,7 @@ func TestWrite_DeterministicMapOrder(t *testing.T) {
 	if rIdx < 0 || mfIdx < 0 || gIdx < 0 {
 		t.Fatalf("expected all three filenames in output; got:\n%s", body)
 	}
-	if !(mfIdx < rIdx && rIdx < gIdx) {
+	if mfIdx >= rIdx || rIdx >= gIdx {
 		t.Errorf("file map keys not in sorted order; Makefile@%d README.md@%d go.mod@%d", mfIdx, rIdx, gIdx)
 	}
 }
@@ -162,4 +162,3 @@ func TestRead_Missing(t *testing.T) {
 		t.Fatal("expected error for missing manifest")
 	}
 }
-

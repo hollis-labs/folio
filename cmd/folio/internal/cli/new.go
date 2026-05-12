@@ -102,9 +102,9 @@ func runGenerate(cmd *cobra.Command, args []string, bundledFS fs.FS, version str
 	}
 
 	if planOnly {
-		res, err := svc.Plan(opts)
-		if err != nil {
-			return err
+		res, planErr := svc.Plan(opts)
+		if planErr != nil {
+			return planErr
 		}
 		printPlan(cmd, res, loaded.Preset.ID, targetDir, verbose)
 		return nil
@@ -112,17 +112,13 @@ func runGenerate(cmd *cobra.Command, args []string, bundledFS fs.FS, version str
 
 	if !yes && !nonInteractive {
 		// Run Plan first so the summary reflects exactly what New would write.
-		plan, err := svc.Plan(opts)
-		if err != nil {
-			return err
+		plan, planErr := svc.Plan(opts)
+		if planErr != nil {
+			return planErr
 		}
 		printSummary(cmd, plan, loaded.Preset.ID, loaded.Preset.Version, targetDir)
-		confirmed, err := confirmYes(cmd)
-		if err != nil {
-			return err
-		}
-		if !confirmed {
-			fprintln(cmd, "cancelled")
+		if !confirmYes(cmd) {
+			fprintln(cmd, "canceled")
 			return nil
 		}
 	}
@@ -207,21 +203,25 @@ func printSummary(cmd *cobra.Command, res service.PlanResult, presetID, version,
 	fmt.Fprintf(out, "  Files to write: %d\n", len(res.Files))
 }
 
-func confirmYes(cmd *cobra.Command) (bool, error) {
+// confirmYes prompts for the post-summary confirmation. Returns true when
+// the user accepts (default on Enter), false when they decline. Non-TTY
+// invocations always return true — they reach this path only when the
+// caller passed --yes was false but stdin/stdout aren't terminals.
+func confirmYes(cmd *cobra.Command) bool {
 	if !isTTY(cmd.OutOrStdout()) {
-		return true, nil
+		return true
 	}
 	fmt.Fprint(cmd.OutOrStdout(), "\nProceed? [Y/n] ")
 	var resp string
 	if _, err := fmt.Fscanln(cmd.InOrStdin(), &resp); err != nil {
 		// EOF on empty Enter is fine — treat as yes.
 		if err.Error() == "unexpected newline" || err.Error() == "EOF" {
-			return true, nil
+			return true
 		}
-		return false, nil
+		return false
 	}
 	resp = strings.ToLower(strings.TrimSpace(resp))
-	return resp == "" || resp == "y" || resp == "yes", nil
+	return resp == "" || resp == "y" || resp == "yes"
 }
 
 func sortedKeys(m map[string]any) []string {

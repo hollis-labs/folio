@@ -150,5 +150,5 @@ func validatePattern(s, pattern string) error {
 // to exit code 130.
 type cancelledError struct{ Err error }
 
-func (c *cancelledError) Error() string { return "cancelled by user" }
+func (c *cancelledError) Error() string { return "canceled by user" }
 func (c *cancelledError) Unwrap() error { return c.Err }

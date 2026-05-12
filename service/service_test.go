@@ -58,8 +58,8 @@ func TestNew_WritesProjectTree(t *testing.T) {
 	}
 	for _, p := range expected {
 		full := filepath.Join(target, filepath.FromSlash(p))
-		if _, err := os.Stat(full); err != nil {
-			t.Errorf("expected file not written: %s (%v)", p, err)
+		if _, statErr := os.Stat(full); statErr != nil {
+			t.Errorf("expected file not written: %s (%v)", p, statErr)
 		}
 	}
 

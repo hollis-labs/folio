@@ -14,7 +14,7 @@ const ManifestFilename = ".folio.yaml"
 // Manifest is the typed in-memory shape of .folio.yaml.
 //
 // Field order matches design doc §3 and is the order yaml.v3 emits when
-// marshalling — relying on struct-field order rather than map iteration is
+// marshaling — relying on struct-field order rather than map iteration is
 // what makes Write idempotent.
 type Manifest struct {
 	FolioVersion string                `yaml:"folio_version"`

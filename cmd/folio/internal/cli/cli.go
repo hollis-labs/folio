@@ -17,10 +17,10 @@ import (
 
 // Exit codes follow design doc cli-prompt-flow-v0.md §9.
 const (
-	ExitOK         = 0
-	ExitGeneric    = 1
-	ExitUsage      = 2
-	ExitCancelled  = 130
+	ExitOK        = 0
+	ExitGeneric   = 1
+	ExitUsage     = 2
+	ExitCancelled = 130
 )
 
 // Run constructs the root command tree, executes it against args, and
