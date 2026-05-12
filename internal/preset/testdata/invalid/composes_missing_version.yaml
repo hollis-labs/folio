@@ -1,0 +1,9 @@
+folio_version: "0.1"
+id: missing-compose-version
+version: 1.0.0
+composes:
+  - id: base
+    source: local
+    path: ../base
+files:
+  source: ./files

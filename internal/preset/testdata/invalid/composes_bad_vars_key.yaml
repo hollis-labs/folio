@@ -1,0 +1,12 @@
+folio_version: "0.1"
+id: bad-compose-vars
+version: 1.0.0
+composes:
+  - id: base
+    version: ">=1.0,<2.0"
+    source: local
+    path: ../base
+    vars:
+      "Bad-Key": "{{ .inputs.project_name }}"
+files:
+  source: ./files

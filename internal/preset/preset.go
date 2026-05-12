@@ -11,10 +11,11 @@ import "gopkg.in/yaml.v3"
 
 // Preset is the in-memory representation of a parsed preset.yaml.
 //
-// Field order mirrors the design doc §2 schema. composes is parsed but a
-// non-empty value triggers a validation error in v0. post_render is parsed
-// but ignored (validation emits a warning). sync is parsed and stored for
-// forward-compatibility but not yet acted on.
+// Field order mirrors the design doc §2 schema. composes is parsed and
+// shape-validated at parse time; cross-preset rules and execution run in
+// internal/compose. post_render is parsed but ignored (validation emits a
+// warning). sync is parsed and stored for forward-compatibility but not yet
+// acted on.
 type Preset struct {
 	FolioVersion string            `yaml:"folio_version"`
 	ID           string            `yaml:"id"`
@@ -69,8 +70,9 @@ type Files struct {
 
 // ComposeEntry references another preset to be applied as a layer.
 //
-// v0 parses but does not execute composition; a non-empty Composes slice
-// triggers a validation error.
+// Parse-time validation (preset.Validate) checks per-entry shape; compose-time
+// rules (vars key must name a declared input on the composed preset, DAG
+// cycles, depth cap) run in internal/compose.
 type ComposeEntry struct {
 	ID      string            `yaml:"id"`
 	Version string            `yaml:"version,omitempty"`

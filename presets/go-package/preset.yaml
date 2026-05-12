@@ -1,0 +1,28 @@
+folio_version: "0.1"
+id: go-package
+version: 1.0.0
+description: Layered Go package — internal/<package>/ library atop the base scaffold
+author: hollis-labs
+license: MIT
+
+composes:
+  - id: base
+    version: ">=0.1,<1.0"
+    source: local
+    path: ../base
+    # No vars: block — inherits caller inputs verbatim. project_name,
+    # github_owner, and description flow through to base from the user.
+
+inputs:
+  - name: package_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go package name (lowercase, snake_case)
+
+computed:
+  pkg_module_path: "{{ .computed.module_path }}/internal/{{ .inputs.package_name }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl

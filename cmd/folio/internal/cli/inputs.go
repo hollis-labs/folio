@@ -35,9 +35,15 @@ func newInputResolver(cmd *cobra.Command) (*inputResolver, error) {
 	return &inputResolver{flagPairs: pairs, inputFile: file}, nil
 }
 
-// resolve walks the preset's declared inputs and produces a map of typed
-// values. Order: --input flags > --inputs-file > FOLIO_INPUT_<UPPER_NAME>
-// env vars > preset default > prompt (when interactive) > error.
+// resolve produces the inputs map for service.New/Plan from --input flags,
+// --inputs-file, env vars, defaults, and interactive prompts.
+//
+// Resolution order per declared input: --input > --inputs-file > FOLIO_INPUT_
+// env > preset default > prompt > error if required. Inputs supplied by the
+// user but NOT declared on this preset still flow through verbatim — the
+// service layer's per-layer resolveInputs validates each composed layer's
+// schema against this aggregated map (necessary for composing presets where
+// the top-level declares only its own additions).
 func (r *inputResolver) resolve(p *preset.Preset, interactive bool, prompter Prompter) (map[string]any, error) {
 	out := map[string]any{}
 
@@ -54,15 +60,25 @@ func (r *inputResolver) resolve(p *preset.Preset, interactive bool, prompter Pro
 		}
 	}
 
+	// Seed with every user-supplied value (flag + file). Composed layers
+	// will see these even if the top-level preset doesn't declare them.
+	// Flag values take precedence over file values per cli-prompt-flow §2.
+	for k, v := range fileVals {
+		out[k] = v
+	}
+	for k, v := range flagVals {
+		out[k] = v
+	}
+
 	var missing []string
 
 	for _, in := range p.Inputs {
-		if v, ok := flagVals[in.Name]; ok {
-			out[in.Name] = coerceForCLI(in, v)
-			continue
-		}
-		if v, ok := fileVals[in.Name]; ok {
-			out[in.Name] = v
+		if _, ok := out[in.Name]; ok {
+			// Already supplied via flag or file; apply CLI-side coercion so
+			// bool / number / list values reach the service typed.
+			if raw, isStr := out[in.Name].(string); isStr {
+				out[in.Name] = coerceForCLI(in, raw)
+			}
 			continue
 		}
 		if v, ok := envVal(in.Name); ok {

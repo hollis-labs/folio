@@ -1,0 +1,13 @@
+// Package {{ .inputs.package_name }} is a library shipped with {{ pascalCase .inputs.project_name }}.
+//
+// The package layout follows the conventional internal/ scheme so the
+// library is not importable outside this module.
+package {{ .inputs.package_name }}
+
+// Hello returns a greeting from the {{ .inputs.package_name }} package.
+//
+// This stub exists so a freshly-generated tree compiles end-to-end; replace
+// it with the package's real surface as the project grows.
+func Hello() string {
+	return "hello from {{ .inputs.package_name }}"
+}

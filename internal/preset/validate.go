@@ -114,7 +114,12 @@ var supportedInputTypes = map[string]struct{}{
 //     names.
 //   - files.source is set; path-safe relative to preset root (no .. escape).
 //   - files.template_suffix starts with '.'.
-//   - composes is empty (v0 error if non-empty).
+//   - composes[*] entries: id matches the preset id pattern; version is
+//     non-empty (constraint syntax checked at compose time); source is
+//     "local" (default) or unset; path is required; vars keys are
+//     identifier-shaped. Cross-preset rules (vars key must name a declared
+//     input of the composed preset, cycle detection, depth cap) run in
+//     internal/compose at compose time.
 //   - post_render present emits a warning.
 //   - sync is parsed but not validated beyond enum membership of policies.
 func (p *Preset) Validate() Result {
@@ -124,7 +129,7 @@ func (p *Preset) Validate() Result {
 	p.validateInputs(&r)
 	p.validateComputed(&r)
 	p.validateFiles(&r)
-	p.validateComposes(&r)
+	p.validateComposeEntries(&r)
 	p.validatePostRender(&r)
 	p.validateSync(&r)
 
@@ -346,11 +351,48 @@ func (p *Preset) validateFiles(r *Result) {
 	}
 }
 
-func (p *Preset) validateComposes(r *Result) {
-	if len(p.Composes) > 0 {
-		p.addErr(r, "composes",
-			"composes is not yet implemented in v0",
-			"remove the composes block or upgrade folio when composition lands in v0.2")
+// validateComposeEntries runs parse-time shape rules on each composes entry.
+// Cross-preset rules (vars key must name a declared input on the composed
+// preset, DAG cycle detection, depth cap) run in internal/compose at compose
+// time, when both manifests are loaded.
+func (p *Preset) validateComposeEntries(r *Result) {
+	for i, c := range p.Composes {
+		base := fmt.Sprintf("composes[%d]", i)
+
+		if c.ID == "" {
+			p.addErr(r, base+".id", "compose entry id is required",
+				`id must match ^[a-z][a-z0-9-]*$ and name another preset`)
+		} else if !idPattern.MatchString(c.ID) {
+			p.addErr(r, base+".id", fmt.Sprintf("invalid compose id %q", c.ID),
+				`must match ^[a-z][a-z0-9-]*$ (lowercase letters, digits, hyphens; start with a letter)`)
+		}
+
+		if c.Version == "" {
+			p.addErr(r, base+".version", "compose entry version constraint is required",
+				`set a semver constraint, e.g. ">=1.0,<2.0" or "^1.0"`)
+		}
+
+		source := c.Source
+		if source == "" {
+			source = "local"
+		}
+		if source != "local" {
+			p.addErr(r, base+".source", fmt.Sprintf("unsupported compose source %q", c.Source),
+				`v0.2 supports source: local (default); git URL sources land in v1.1+`)
+		}
+
+		if c.Path == "" {
+			p.addErr(r, base+".path", "compose entry path is required",
+				"set path to the composed preset's directory, relative to this preset.yaml")
+		}
+
+		for key := range c.Vars {
+			if !identPattern.MatchString(key) {
+				p.addErr(r, base+".vars."+key,
+					fmt.Sprintf("invalid vars key %q", key),
+					`vars keys must match ^[a-z][a-z0-9_]*$ (same as input names)`)
+			}
+		}
 	}
 }
 

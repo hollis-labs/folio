@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: bad-compose-id
+version: 1.0.0
+composes:
+  - id: "Has-Caps"
+    version: ">=1.0,<2.0"
+    source: local
+    path: ../base
+files:
+  source: ./files

@@ -28,8 +28,11 @@ type Manifest struct {
 	SyncHistory  []SyncEvent           `yaml:"sync_history,omitempty"`
 }
 
-// PresetRef identifies one preset that contributed to the render. In v0,
-// Presets always has length 1; composition (multiple layers) lands later.
+// PresetRef identifies one preset that contributed to the render. The
+// Manifest.Presets slice holds every layer in apply order — for a
+// non-composing preset the slice has length 1; for composing presets it
+// has one entry per layer, deepest leaves first, root last (matching the
+// internal/compose graph's topological order).
 type PresetRef struct {
 	ID           string `yaml:"id"`
 	Version      string `yaml:"version"`

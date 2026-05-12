@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: bad-compose-source
+version: 1.0.0
+composes:
+  - id: base
+    version: ">=1.0,<2.0"
+    source: git
+    path: github.com/example/base
+files:
+  source: ./files

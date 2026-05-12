@@ -4,6 +4,140 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — Unreleased
+
+Composition slice. `composes:` becomes a working layered render driving a
+real semver constraint resolver, with the first bundled composing preset
+(`go-package`) layering an internal library on top of `base`.
+
+### Added
+
+- **`composes:` runtime.** Presets can declare `composes: [{id, version,
+  source: local, path, vars}]`; folio walks the compose DAG (cycle
+  detection + depth cap at 8), resolves each entry's version constraint
+  against the loaded preset, and renders layers in topological order
+  (deepest leaves first, root last). Same-path writes across layers
+  silently overwrite — last writer wins, paralleling how presets author
+  composing overlays.
+- **Semver constraint resolver.** npm-style operators (`>=`, `<=`, `>`,
+  `<`, `~`, `^`, `*`, exact), AND-via-comma (`>=1.0,<2.0`), OR-via-pipe
+  (`^1.0 || ^2.0`). Partial versions canonicalize (`1.0` → `1.0.0`).
+  Replaces the v0.1 lexicographic-pick-highest in `service.findUserPreset`
+  — superseding the `single_version_preset_storage_v0` limitation captured
+  at v0.1 ship.
+- **Cross-layer var scoping.** Per the design doc §7, a composed preset
+  inherits caller `.inputs.*` by default; the composing preset can
+  per-key override via the entry's `vars:` block. Templates inside `vars:`
+  evaluate against the *caller's* render context (so `{{.inputs.foo}}`
+  resolves to the caller's input named `foo`, not the composed preset's).
+- **Cross-layer computed inheritance.** Later layers' `computed:` templates
+  see earlier layers' resolved values via `.computed.*`. Cross-layer key
+  collision is last-writer-wins, paralleling file overwrites.
+- **Cross-layer input inheritance.** A layer's render context sees every
+  prior layer's resolved/defaulted inputs in addition to its own declared
+  keys, so composing presets needn't redeclare every input from a layer
+  they compose.
+- **`go-package` bundled preset.** First composing preset shipped in the
+  binary. Layers on `base` to add `internal/<package_name>/` library code +
+  test, overwrites `README.md` and the base `cmd/<project>/main.go` with a
+  library-first stub. Exercises both the additive and overwrite directions
+  of composition.
+- **Multi-entry `.folio.yaml` `presets:`.** The array now carries every
+  contributing layer in apply order; per-file `preset:` records the last
+  layer that produced the file. Verified byte-identical round-trip.
+- **CLI error visibility.** Non-zero exits now print `folio: <error>` to
+  stderr (previously silenced by cobra `SilenceErrors`). Pre-existing v0.1
+  papercut, fixed here because composition errors are richer and worth
+  surfacing.
+- **CLI input passthrough.** `--input` pairs are now forwarded verbatim to
+  the service even when they aren't declared on the top-level preset —
+  needed so composed-layer inputs (e.g., `--input project_name=...` for a
+  `go-package` invocation, where `project_name` is declared on `base`)
+  reach the right layer.
+
+### Changed
+
+- `service.findUserPreset` takes a `*compose.Constraint` parameter. `nil`
+  picks the semver-highest version overall (replacing the v0.1 lexicographic
+  shortcut); a non-nil constraint filters and surfaces a typed
+  `ErrPresetNotFound` with the available-versions list when nothing matches.
+- `service.LoadedPreset` gains unexported compose-context fields populated
+  by `LoadPreset` so the compose loader can walk the source-root FS for
+  relative `composes[].path` resolution.
+- `internal/preset.validateComposes` (hard-error on any `composes:` entry)
+  is replaced by `validateComposeEntries` running per-entry shape rules
+  (id pattern, non-empty version constraint, source enum, required path,
+  identifier-shaped vars keys). Cross-preset rules (vars key must name a
+  declared input on the composed preset, cycle detection, depth cap) run
+  in `internal/compose` at compose time.
+- `service.resolveComputed` now seeds its output map from `ctx.Computed`
+  instead of clobbering it, so cross-layer computed inheritance works.
+  Single-preset path unchanged (caller passes empty `Computed`).
+- `service.prepareRender` no longer pre-resolves the root preset's
+  inputs/computed; that work moves to `service.composedLayers` so each
+  layer (composed or single-preset) resolves uniformly against its own
+  declared schema.
+
+### Composition example
+
+```sh
+folio new go-package /tmp/folio-compose \
+  --input project_name=smoke_compose \
+  --input github_owner=chrispian \
+  --input package_name=greeter \
+  --non-interactive
+```
+
+Generates a project with `base`'s files (`go.mod`, `Makefile`, `.gitignore`,
+`LICENSE`, `.github/workflows/ci.yml`) plus `go-package`'s additions
+(`internal/greeter/greeter.go`, `internal/greeter/greeter_test.go`) and
+overlays (`README.md` describing the library, `cmd/smoke_compose/main.go`
+calling into the library). `.folio.yaml` records both layers in apply
+order. The generated tree passes `go vet`, `go build`, `go test` clean.
+
+### Fixed (review pass)
+
+- **Diamond compose-entry binding** — In compose graphs where the same
+  preset is reached via two parents, `LayerRef.ComposeEntry` now records
+  the FIRST parent's entry (declared-order encounter, locked in
+  BuildGraph). v0.2 does not support diamonds with conflicting `vars:`
+  blocks under different parents; the first-parent-wins choice avoids
+  the silently-arbitrary "last-stored" behavior the original rebuild
+  produced.
+- **`layerInputs` no longer leaks undeclared user keys** — The per-layer
+  render context is now `mergedInputs ∪ declared` only; raw user keys
+  that no layer declares (e.g., a typo like `--input bogous=value`) are
+  dropped after the per-layer `resolveInputs` filter, preventing them
+  from reaching templates or `.folio.yaml` `inputs:`.
+- **`ResolveComposePath` tightened** — Rejects absolute entry paths
+  (leading `/`) and any cleaned result equal to `..` or starting with
+  `../`, regardless of root. Previously the root=`"."` short-circuit
+  could let traversal escapes through to a downstream `fs.Sub` failure.
+- **`coerceInput` accepts comma-strings for `list[string]`** — Now that
+  the CLI passes undeclared `--input` pairs through verbatim, the
+  service-side coercer needs to accept the same comma-separated string
+  shape the CLI's `coerceForCLI` used to handle. Empty string → empty
+  list; trims each split part.
+- **Cross-layer "ignored input" warning noise suppressed** — When a
+  user-supplied `--input` key IS declared on SOME layer in the compose
+  chain, `resolveInputs`'s `"input X is not declared by preset Y
+  (ignored)"` warning is suppressed for the layers that don't own it.
+  Single-layer use is unaffected; genuine typos (key declared nowhere)
+  still warn.
+
+### Out of scope (still deferred)
+
+- `folio sync` + diff UI.
+- Federated git-URL preset sources (`source: git`).
+- Multi-version bundled presets (`presets/<id>@<version>/`).
+- Per-file `from_preset_chain` recording in `.folio.yaml` (a sync
+  prerequisite).
+- Cycle/depth error formatting beyond preset ids (no file:line yet).
+- Topological dependency resolution within a single layer's `computed:`
+  block (alphabetic ordering still serves).
+- Diamond compose detection + warning when the same composed id appears
+  under multiple parents with conflicting `vars:` blocks.
+
 ## [0.1.0] — 2026-05-12
 
 First public release. v0 vertical slice: prove the preset format + render

@@ -1,0 +1,25 @@
+folio_version: "0.1"
+id: composer
+version: 1.0.0
+description: Service-layer compose test — layers on sample
+author: hollis-labs
+
+composes:
+  - id: sample
+    version: ">=1.0,<2.0"
+    source: local
+    path: ../sample
+
+inputs:
+  - name: package_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Library package name (snake_case)
+
+computed:
+  pkg_module_path: "{{ .computed.module_path }}/internal/{{ .inputs.package_name }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl

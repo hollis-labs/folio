@@ -12,6 +12,7 @@ func TestValidate_Valid(t *testing.T) {
 	cases := []string{
 		"minimal.yaml",
 		"full.yaml",
+		"composes_local.yaml",
 	}
 	for _, name := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -62,7 +63,11 @@ func TestValidate_Invalid(t *testing.T) {
 		{"bad_enum_default.yaml", "inputs[0].default", "not one of values"},
 		{"default_type_mismatch.yaml", "inputs[0].default", "not a number"},
 		{"computed_collision.yaml", "computed.project_name", "collides"},
-		{"composes_non_empty.yaml", "composes", "not yet implemented"},
+		{"composes_bad_id.yaml", "composes[0].id", "invalid compose id"},
+		{"composes_missing_version.yaml", "composes[0].version", "version constraint is required"},
+		{"composes_bad_source.yaml", "composes[0].source", "unsupported compose source"},
+		{"composes_missing_path.yaml", "composes[0].path", "path is required"},
+		{"composes_bad_vars_key.yaml", "composes[0].vars.Bad-Key", "invalid vars key"},
 		{"bad_template_suffix.yaml", "files.template_suffix", "must start with a dot"},
 		{"files_source_escapes.yaml", "files.source", "escapes the preset root"},
 		{"bad_sync_policy.yaml", "sync.default", "unsupported sync policy"},
