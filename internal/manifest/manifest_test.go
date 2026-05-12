@@ -162,3 +162,83 @@ func TestRead_Missing(t *testing.T) {
 		t.Fatal("expected error for missing manifest")
 	}
 }
+
+// TestWrite_MultiPresetOrderPreserved verifies that .folio.yaml writes the
+// presets array in declared (apply) order — NOT alphabetised. Composition
+// produces multiple presets in topological apply order; reordering would
+// break sync-history reproducibility and confuse the per-file `preset:`
+// attribution downstream.
+func TestWrite_MultiPresetOrderPreserved(t *testing.T) {
+	m := sampleManifest()
+	// Declared order: zulu first, then alpha, then mid. If yaml.v3
+	// alphabetised list members (it doesn't — only map keys), zulu would
+	// land last.
+	m.Presets = []manifest.PresetRef{
+		{ID: "zulu", Version: "1.0.0", Source: "bundled", ResolvedPath: "bundled:presets/zulu"},
+		{ID: "alpha", Version: "1.0.0", Source: "bundled", ResolvedPath: "bundled:presets/alpha"},
+		{ID: "mid", Version: "1.0.0", Source: "bundled", ResolvedPath: "bundled:presets/mid"},
+	}
+	m.SyncHistory[0].Presets = []manifest.PresetRef{
+		{ID: "zulu", Version: "1.0.0"},
+		{ID: "alpha", Version: "1.0.0"},
+		{ID: "mid", Version: "1.0.0"},
+	}
+
+	dir := t.TempDir()
+	if err := manifest.Write(dir, m); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	got, err := manifest.Read(dir)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	wantOrder := []string{"zulu", "alpha", "mid"}
+	if len(got.Presets) != len(wantOrder) {
+		t.Fatalf("presets length = %d, want %d", len(got.Presets), len(wantOrder))
+	}
+	for i, want := range wantOrder {
+		if got.Presets[i].ID != want {
+			t.Errorf("presets[%d].id = %q, want %q (full: %+v)",
+				i, got.Presets[i].ID, want, got.Presets)
+		}
+	}
+	for i, want := range wantOrder {
+		if got.SyncHistory[0].Presets[i].ID != want {
+			t.Errorf("syncHistory[0].presets[%d].id = %q, want %q",
+				i, got.SyncHistory[0].Presets[i].ID, want)
+		}
+	}
+}
+
+// TestWrite_MultiPresetRoundTripByteIdentical re-writes the same manifest
+// twice and asserts the byte output is identical — locks the deterministic
+// serialization guarantee for multi-entry presets arrays.
+func TestWrite_MultiPresetRoundTripByteIdentical(t *testing.T) {
+	m := sampleManifest()
+	m.Presets = []manifest.PresetRef{
+		{ID: "base", Version: "1.0.0", Source: "bundled", ResolvedPath: "bundled:presets/base"},
+		{ID: "composer", Version: "1.0.0", Source: "bundled", ResolvedPath: "bundled:presets/composer"},
+	}
+	m.SyncHistory[0].Presets = []manifest.PresetRef{
+		{ID: "base", Version: "1.0.0"},
+		{ID: "composer", Version: "1.0.0"},
+	}
+	dir1, dir2 := t.TempDir(), t.TempDir()
+	if err := manifest.Write(dir1, m); err != nil {
+		t.Fatalf("Write 1: %v", err)
+	}
+	if err := manifest.Write(dir2, m); err != nil {
+		t.Fatalf("Write 2: %v", err)
+	}
+	a, err := os.ReadFile(filepath.Join(dir1, manifest.ManifestFilename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(dir2, manifest.ManifestFilename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(a, b) {
+		t.Errorf("manifest output not byte-identical across writes:\n--- a ---\n%s\n--- b ---\n%s", a, b)
+	}
+}
