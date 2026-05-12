@@ -1,0 +1,59 @@
+folio_version: "0.1"
+id: full-preset
+version: 1.2.3
+description: A full preset exercising every v0 surface
+author: hollis-labs
+license: MIT
+
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go module name
+    min_length: 2
+    max_length: 64
+  - name: github_owner
+    type: string
+    required: true
+    description: GitHub owner referenced by computed.module_path
+  - name: with_cli
+    type: bool
+    default: false
+  - name: replicas
+    type: number
+    default: 3
+    min: 1
+    max: 10
+  - name: license
+    type: enum
+    values: [MIT, Apache-2.0, BSD-3-Clause]
+    default: MIT
+  - name: tags
+    type: list[string]
+    default: [dev, internal]
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+  ignore:
+    - "*.example"
+  binary_extensions:
+    - .png
+    - .ico
+
+sync:
+  default: prompt
+  rules:
+    - glob: "Makefile"
+      policy: overwrite
+    - glob: ".github/workflows/**"
+      policy: overwrite
+    - glob: "internal/**"
+      policy: skip
+    - glob: "README.md"
+      policy: three-way

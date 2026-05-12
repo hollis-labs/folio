@@ -1,0 +1,6 @@
+# {{ pascalCase .inputs.project_name }}
+
+{{ default "(no description)" .inputs.description }}
+
+Module: `{{ .computed.module_path }}`
+Generated: {{ dateISO .now }}

@@ -1,0 +1,8 @@
+// Command {{ .inputs.project_name }} is the entrypoint for {{ pascalCase .inputs.project_name }}.
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, {{ .inputs.project_name }}")
+}

@@ -1,0 +1,30 @@
+# Binary built from `make build`
+/{{ .inputs.project_name }}
+/cmd/{{ .inputs.project_name }}/{{ .inputs.project_name }}
+
+# Go test + build artefacts
+*.exe
+*.test
+*.out
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# Vendored deps (most modern modules don't vendor)
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.env
+.env.local

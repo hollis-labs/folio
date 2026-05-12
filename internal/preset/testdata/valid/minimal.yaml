@@ -1,0 +1,5 @@
+folio_version: "0.1"
+id: minimal
+version: 1.0.0
+files:
+  source: ./files

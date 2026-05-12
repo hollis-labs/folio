@@ -1,0 +1,5 @@
+folio_version: "0.1"
+id: good-id
+version: not-semver
+files:
+  source: ./files

@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: bad-sync
+version: 1.0.0
+files:
+  source: ./files
+sync:
+  default: bogus
+  rules:
+    - glob: "Makefile"
+      policy: overwrite

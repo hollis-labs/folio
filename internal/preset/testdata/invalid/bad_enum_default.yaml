@@ -1,0 +1,10 @@
+folio_version: "0.1"
+id: bad-enum
+version: 1.0.0
+inputs:
+  - name: license
+    type: enum
+    values: [MIT, Apache-2.0]
+    default: GPL-3.0
+files:
+  source: ./files
