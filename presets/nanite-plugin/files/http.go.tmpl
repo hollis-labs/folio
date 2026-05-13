@@ -1,0 +1,26 @@
+{{- if .inputs.handler_http -}}
+package main
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/hollis-labs/plugin-sdk/subprocess"
+)
+
+// HTTPHandle services routes the plugin registered in plugin.yaml's
+// `http_routes:` block. Streaming is not supported on this path — emit
+// SSE envelopes via command or event results instead.
+func (p *plugin) HTTPHandle(ctx context.Context, req subprocess.HTTPRequest) (subprocess.HTTPResponse, error) {
+	switch req.Path {
+	case "/plugins/{{ .inputs.plugin_name }}/hello":
+		return subprocess.HTTPResponse{
+			Status:  http.StatusOK,
+			Headers: map[string]string{"Content-Type": "text/plain; charset=utf-8"},
+			Body:    []byte("hello from {{ .inputs.plugin_name }}\n"),
+		}, nil
+	default:
+		return subprocess.HTTPResponse{Status: http.StatusNotFound}, nil
+	}
+}
+{{- end -}}

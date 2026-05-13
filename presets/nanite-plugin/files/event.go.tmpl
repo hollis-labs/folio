@@ -1,0 +1,22 @@
+{{- if .inputs.handler_event -}}
+package main
+
+import (
+	"context"
+
+	"github.com/hollis-labs/plugin-sdk/subprocess"
+)
+
+// EventHandle services host events the plugin subscribes to. The
+// registration in plugin.yaml decides which event types reach this
+// method; switch on req.Type to fan out per-type behavior.
+func (p *plugin) EventHandle(ctx context.Context, req subprocess.EventRequest) (subprocess.EventResult, error) {
+	switch req.Type {
+	case "message.sent":
+		// content, _ := req.Data["content"].(string)
+		return subprocess.EventResult{}, nil
+	default:
+		return subprocess.EventResult{}, nil
+	}
+}
+{{- end -}}

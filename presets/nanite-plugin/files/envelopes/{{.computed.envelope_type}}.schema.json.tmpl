@@ -1,0 +1,15 @@
+{{- if .inputs.include_envelopes -}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://plugins.nanite.hollislabs.dev/{{ .inputs.plugin_name }}/envelopes/{{ .computed.envelope_type }}.schema.json",
+  "title": "{{ .computed.plugin_title }}Card",
+  "description": "Data payload for the {{ .computed.envelope_type }} envelope type emitted by the {{ .inputs.plugin_name }} plugin.",
+  "type": "object",
+  "required": ["title"],
+  "additionalProperties": false,
+  "properties": {
+    "title":   { "type": "string" },
+    "summary": { "type": "string" }
+  }
+}
+{{- end -}}

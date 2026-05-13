@@ -1,0 +1,105 @@
+folio_version: "0.1"
+id: nanite-plugin
+version: 1.0.0
+description: Nanite subprocess plugin — Go binary + plugin.yaml manifest + optional React UI
+author: hollis-labs
+license: MIT
+
+inputs:
+  - name: plugin_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Short plugin id (lowercase, hyphens; e.g. `giphy`, `oembed`). Becomes the binary name and the `id:` in plugin.yaml. The repo dir is `nanite-plugin-<plugin_name>`.
+
+  - name: github_owner
+    type: string
+    required: true
+    default: hollis-labs
+    description: GitHub org or user that hosts the plugin repo
+
+  - name: description
+    type: string
+    required: true
+    description: One-line plugin description (shown in plugin.yaml and README)
+
+  - name: author
+    type: string
+    default: Hollis Labs
+    description: Author name written to plugin.yaml and LICENSE
+
+  - name: license
+    type: enum
+    values: [MIT, Apache-2.0]
+    default: MIT
+    description: SPDX license identifier — controls LICENSE file contents and plugin.yaml.license
+
+  - name: sdk_version
+    type: string
+    default: v0.3.0
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: github.com/hollis-labs/plugin-sdk version constraint (must be a v-prefixed semver)
+
+  - name: nanite_compat_min
+    type: string
+    default: 0.1.0
+    description: Minimum Nanite host version this plugin supports (plain semver, no v prefix)
+
+  - name: handler_command
+    type: bool
+    default: false
+    description: Implement subprocess.CommandHandler (slash command handler) and register a command in plugin.yaml
+
+  - name: handler_event
+    type: bool
+    default: false
+    description: Implement subprocess.EventHandler (host-event subscriber) and register an event subscription
+
+  - name: handler_mcp
+    type: bool
+    default: false
+    description: Implement subprocess.MCPHandler (MCP tool dispatcher) and register an MCP server in plugin.yaml
+
+  - name: handler_http
+    type: bool
+    default: false
+    description: Implement subprocess.HTTPHandler (HTTP route handler) and register an HTTP route
+
+  - name: include_envelopes
+    type: bool
+    default: false
+    description: Scaffold the envelopes/ directory with a starter JSON Schema (also registered in plugin.yaml)
+
+  - name: include_ui
+    type: bool
+    default: false
+    description: Scaffold a Vite/React 18 UI bundle under ui/ (and register `ui:` in plugin.yaml)
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/nanite-plugin-{{ .inputs.plugin_name }}"
+  plugin_title: "{{ pascalCase .inputs.plugin_name }}"
+  envelope_type: "{{ .inputs.plugin_name }}-card"
+  signing_key_env: "{{ upper (replace \"-\" \"_\" .inputs.plugin_name) }}_SIGNING_KEY"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    - glob: "main.go"
+      policy: three-way
+    - glob: "plugin.yaml"
+      policy: three-way
+    - glob: "Makefile"
+      policy: overwrite
+    - glob: "go.mod"
+      policy: skip
+    - glob: "README.md"
+      policy: three-way
+    - glob: "ui/**"
+      policy: skip
+    - glob: "envelopes/**"
+      policy: skip

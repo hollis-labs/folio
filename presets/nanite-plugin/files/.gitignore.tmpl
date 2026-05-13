@@ -1,0 +1,33 @@
+# Native plugin binary from `make build`
+/{{ .inputs.plugin_name }}
+
+# Release archives + staging
+/dist/
+
+# Go test/build artefacts
+*.exe
+*.test
+*.out
+coverage.out
+*.coverprofile
+
+{{ if .inputs.include_ui -}}
+# UI build output
+ui/dist/
+ui/node_modules/
+
+{{ end -}}
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.env
+.env.local

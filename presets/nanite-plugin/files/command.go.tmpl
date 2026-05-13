@@ -1,0 +1,26 @@
+{{- if .inputs.handler_command -}}
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/hollis-labs/plugin-sdk/subprocess"
+)
+
+// Command handles the /{{ .inputs.plugin_name }} slash command. The host
+// invokes this when a user types `/{{ .inputs.plugin_name }} <args>` in
+// chat. req.Args is the raw argument string after the command name.
+func (p *plugin) Command(ctx context.Context, req subprocess.CommandRequest) (subprocess.CommandResult, error) {
+	if req.Args == "" {
+		return subprocess.CommandResult{
+			Action:  "error",
+			Content: "usage: /{{ .inputs.plugin_name }} <args>",
+		}, nil
+	}
+	return subprocess.CommandResult{
+		Action:  "message",
+		Content: fmt.Sprintf("{{ .computed.plugin_title }}: received %q", req.Args),
+	}, nil
+}
+{{- end -}}

@@ -1,0 +1,47 @@
+// {{ .computed.plugin_title }} is a subprocess plugin for Nanite.
+//
+// {{ .inputs.description }}
+//
+// Runtime: the host spawns this binary as a subprocess and speaks
+// JSON-RPC over stdio. Configuration declared in plugin.yaml flows in via
+// InitParams.Config; the host resolves env vars / keychain entries.
+package main
+
+import (
+	"context"
+	"os"
+
+	"github.com/hollis-labs/plugin-sdk/subprocess"
+)
+
+// plugin is the subprocess plugin implementation. It satisfies
+// subprocess.Plugin and may also satisfy one or more capability
+// interfaces (CommandHandler, EventHandler, MCPHandler, HTTPHandler)
+// depending on what was scaffolded — those methods live in separate
+// files in this package so each capability can be enabled or removed
+// without churning main.go.
+type plugin struct{}
+
+func (p *plugin) Init(ctx context.Context, params subprocess.InitParams) (subprocess.InitResult, error) {
+	return subprocess.InitResult{
+		ID:          "{{ .inputs.plugin_name }}",
+		Name:        "{{ .computed.plugin_title }}",
+		Version:     "0.1.0",
+		Description: {{ .inputs.description | quote }},
+		Protocol:    subprocess.ProtocolVersion,
+	}, nil
+}
+
+func (p *plugin) Load(ctx context.Context) (subprocess.LoadResult, error) {
+	return subprocess.LoadResult{}, nil
+}
+
+func (p *plugin) Unload(ctx context.Context) error {
+	return nil
+}
+
+func main() {
+	if err := subprocess.Serve(&plugin{}); err != nil {
+		os.Exit(1)
+	}
+}

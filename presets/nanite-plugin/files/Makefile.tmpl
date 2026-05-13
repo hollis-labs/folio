@@ -1,0 +1,96 @@
+PLUGIN_ID := {{ .inputs.plugin_name }}
+VERSION   := $(shell awk '/^version:/ {print $$2; exit}' plugin.yaml)
+PLATFORMS := darwin-arm64 darwin-amd64 linux-amd64 linux-arm64 windows-amd64
+
+DIST_DIR     := dist
+STAGING_DIR  := $(DIST_DIR)/staging
+ARCHIVES_DIR := $(DIST_DIR)/archives
+
+# Optional; when empty, `make release` skips signature generation.
+# Expected format: base64-encoded Ed25519 seed+pub (ed25519.PrivateKey
+# concatenated form, 64 bytes). Generate one with `make keygen`.
+{{ .computed.signing_key_env }} ?=
+
+# Files shipped inside each per-platform archive. dev-signing-key.pub is
+# included only if it exists (generated via `make keygen` — see README).
+ARCHIVE_CONTENTS := plugin.yaml README.md LICENSE CHANGELOG.md{{ if .inputs.include_envelopes }} envelopes{{ end }}
+
+.PHONY: all build dev{{ if .inputs.include_ui }} build-ui{{ end }} build-go release keygen test vet clean
+
+all: release
+
+# Native build for local development. Produces ./{{ .inputs.plugin_name }} next
+# to plugin.yaml so the host can execute it via the manifest entrypoint
+# during `nanite plugin install ./nanite-plugin-{{ .inputs.plugin_name }}`.
+build dev:
+{{- if .inputs.include_ui }}
+	cd ui && npm install --no-audit --no-fund --silent && npm run build
+{{- end }}
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o $(PLUGIN_ID) .
+
+{{ if .inputs.include_ui -}}
+build-ui:
+	cd ui && npm install --no-audit --no-fund --silent && npm run build
+
+{{ end -}}
+build-go:
+	@rm -rf $(STAGING_DIR)
+	@mkdir -p $(STAGING_DIR)
+	@for plat in $(PLATFORMS); do \
+		os=$${plat%-*}; arch=$${plat#*-}; \
+		if [ "$$os" = "windows" ]; then bin=$(PLUGIN_ID).exe; else bin=$(PLUGIN_ID); fi; \
+		echo ">> building $$os/$$arch"; \
+		mkdir -p $(STAGING_DIR)/$$plat; \
+		GOOS=$$os GOARCH=$$arch CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
+			-o $(STAGING_DIR)/$$plat/$$bin .; \
+	done
+
+release: {{ if .inputs.include_ui }}build-ui {{ end }}build-go
+	@mkdir -p $(ARCHIVES_DIR)
+	@for plat in $(PLATFORMS); do \
+		os=$${plat%-*}; arch=$${plat#*-}; \
+		if [ "$$os" = "windows" ]; then bin=$(PLUGIN_ID).exe; else bin=$(PLUGIN_ID); fi; \
+		stage=$(STAGING_DIR)/$$plat; \
+		echo ">> assembling $$plat archive"; \
+		cp -r $(ARCHIVE_CONTENTS) $$stage/; \
+		[ -f dev-signing-key.pub ] && cp dev-signing-key.pub $$stage/ || true; \
+{{- if .inputs.include_ui }}
+		mkdir -p $$stage/ui/dist; \
+		cp ui/dist/index.js $$stage/ui/dist/index.js; \
+		[ -f ui/dist/style.css ] && cp ui/dist/style.css $$stage/ui/dist/style.css || true; \
+{{- end }}
+		archive=$(ARCHIVES_DIR)/$(PLUGIN_ID)-$(VERSION)-$$plat.tar.gz; \
+		tar -C $$stage -czf $$archive .; \
+		if command -v sha256sum >/dev/null 2>&1; then \
+			sha256sum $$archive | awk '{print $$1}' > $$archive.sha256; \
+		elif command -v shasum >/dev/null 2>&1; then \
+			shasum -a 256 $$archive | awk '{print $$1}' > $$archive.sha256; \
+		else \
+			echo "error: neither sha256sum nor shasum is available" >&2; \
+			exit 1; \
+		fi; \
+	done
+	@if [ -n "$${{ .computed.signing_key_env }}" ]; then \
+		echo ">> signing archives"; \
+		for archive in $(ARCHIVES_DIR)/*.tar.gz; do \
+			{{ .computed.signing_key_env }}="$${{ .computed.signing_key_env }}" go run ./cmd/sign $$archive > $$archive.sig; \
+		done; \
+	else \
+		echo ">> {{ .computed.signing_key_env }} not set — skipping signing (dev build)"; \
+	fi
+
+# Generate a fresh Ed25519 development signing keypair. Writes the
+# public key to dev-signing-key.pub (committed) and prints the base64-
+# encoded private key to stdout — capture it in a password manager and
+# export as {{ .computed.signing_key_env }} when running `make release`.
+keygen:
+	go run ./cmd/sign keygen
+
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+clean:
+	rm -rf $(DIST_DIR){{ if .inputs.include_ui }} ui/dist ui/node_modules{{ end }}

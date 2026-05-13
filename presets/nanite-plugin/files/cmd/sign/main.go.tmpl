@@ -1,0 +1,83 @@
+// sign is a release helper invoked by `make release` and `make keygen`.
+//
+// `sign <path>`    — reads the file at path, signs its bytes with the
+//                    Ed25519 private key in {{ .computed.signing_key_env }}
+//                    (base64-encoded, 64-byte ed25519.PrivateKey), and
+//                    prints the signature as base64 to stdout.
+// `sign keygen`    — generates a fresh Ed25519 keypair, writes the
+//                    public key to dev-signing-key.pub in the current
+//                    directory, and prints the base64-encoded private
+//                    key to stdout (capture in a password manager).
+//
+// This helper only runs during release builds and is never loaded at
+// plugin runtime; it lives in its own cmd/ subdir so `go build .` for
+// the plugin binary does not pick it up.
+package main
+
+import (
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"io"
+	"os"
+)
+
+const keyEnv = "{{ .computed.signing_key_env }}"
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: sign <path> | sign keygen")
+		os.Exit(2)
+	}
+	switch os.Args[1] {
+	case "keygen":
+		if err := keygen(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	default:
+		if err := signFile(os.Args[1]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
+}
+
+func signFile(path string) error {
+	key := os.Getenv(keyEnv)
+	if key == "" {
+		return fmt.Errorf("%s not set", keyEnv)
+	}
+	raw, err := base64.StdEncoding.DecodeString(key)
+	if err != nil || len(raw) != ed25519.PrivateKeySize {
+		return fmt.Errorf("%s must be base64-encoded 64-byte ed25519 private key", keyEnv)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	sig := ed25519.Sign(ed25519.PrivateKey(raw), data)
+	fmt.Println(base64.StdEncoding.EncodeToString(sig))
+	return nil
+}
+
+func keygen() error {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return err
+	}
+	pubB64 := base64.StdEncoding.EncodeToString(pub)
+	if err := os.WriteFile("dev-signing-key.pub", []byte(pubB64+"\n"), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintln(os.Stderr, "wrote dev-signing-key.pub (commit this)")
+	fmt.Fprintln(os.Stderr, "private key (capture in a password manager and export as "+keyEnv+"):")
+	fmt.Println(base64.StdEncoding.EncodeToString(priv))
+	return nil
+}

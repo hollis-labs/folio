@@ -1,0 +1,21 @@
+{{- if .inputs.include_ui -}}
+interface {{ .computed.plugin_title }}CardData {
+  title: string
+  summary?: string
+}
+
+interface {{ .computed.plugin_title }}CardProps {
+  data: {{ .computed.plugin_title }}CardData
+}
+
+export function {{ .computed.plugin_title }}Card({ data }: {{ .computed.plugin_title }}CardProps) {
+  return (
+    <div className="rounded-sm border border-border bg-bg-elevated p-3">
+      <div className="text-sm font-medium text-fg">{data.title}</div>
+      {data.summary && (
+        <div className="mt-1 text-xs text-fg-muted">{data.summary}</div>
+      )}
+    </div>
+  )
+}
+{{- end -}}

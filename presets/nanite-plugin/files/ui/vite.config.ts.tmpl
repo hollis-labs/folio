@@ -1,0 +1,33 @@
+{{- if .inputs.include_ui -}}
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+// React and JSX runtime come from the host at runtime.
+const external = [
+  'react',
+  'react-dom',
+  'react-dom/client',
+  'react/jsx-runtime',
+]
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    lib: {
+      entry: 'src/index.tsx',
+      formats: ['es'],
+      fileName: () => 'index.js',
+    },
+    rollupOptions: {
+      external,
+      output: {
+        assetFileNames: (info) =>
+          info.name && info.name.endsWith('.css') ? 'style.css' : '[name][extname]',
+      },
+    },
+    cssCodeSplit: false,
+    sourcemap: true,
+    emptyOutDir: true,
+  },
+})
+{{- end -}}

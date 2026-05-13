@@ -1,0 +1,31 @@
+{{- if .inputs.handler_mcp -}}
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/hollis-labs/plugin-sdk/subprocess"
+)
+
+// MCPCallTool routes mcp/call_tool invocations for tools registered in
+// plugin.yaml's `mcp_servers:` block. Unknown tool names return an
+// IsError result so the agent can surface the failure without tearing
+// down the transport.
+func (p *plugin) MCPCallTool(ctx context.Context, req subprocess.MCPCallRequest) (subprocess.MCPCallResult, error) {
+	switch req.ToolName {
+	case "example":
+		payload, _ := json.Marshal(map[string]string{
+			"plugin": "{{ .inputs.plugin_name }}",
+			"tool":   req.ToolName,
+		})
+		return subprocess.MCPCallResult{Content: payload}, nil
+	default:
+		payload, _ := json.Marshal(map[string]string{
+			"error": fmt.Sprintf("unknown tool %q", req.ToolName),
+		})
+		return subprocess.MCPCallResult{Content: payload, IsError: true}, nil
+	}
+}
+{{- end -}}

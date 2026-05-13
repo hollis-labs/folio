@@ -1,0 +1,3 @@
+{{- if .inputs.include_ui -}}
+export { {{ .computed.plugin_title }}Card } from './components/{{ .computed.plugin_title }}Card'
+{{- end -}}

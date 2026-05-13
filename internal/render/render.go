@@ -207,6 +207,14 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 				}
 				return err
 			}
+			// Template files that render to whitespace-only content are
+			// dropped from the result. This lets preset authors gate
+			// optional files behind `{{- if .inputs.flag -}}…{{- end -}}`
+			// wrappers without producing empty stubs in the target tree.
+			// Literal-copy files always land regardless of content.
+			if strings.TrimSpace(rendered) == "" {
+				return nil
+			}
 			outPath = strings.TrimSuffix(renderedRel, suffix)
 			content = []byte(rendered)
 			isTemplate = true

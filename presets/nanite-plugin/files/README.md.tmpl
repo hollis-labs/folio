@@ -1,0 +1,97 @@
+# nanite-plugin-{{ .inputs.plugin_name }}
+
+{{ .inputs.description }}
+
+Subprocess plugin for [Nanite](https://github.com/hollis-labs/nanite), built
+on [`github.com/hollis-labs/plugin-sdk`]({{ .inputs.sdk_version }}).
+
+## Install
+
+During development, point the host at a local checkout:
+
+```sh
+nanite plugin install ./nanite-plugin-{{ .inputs.plugin_name }}
+```
+
+Released archives are published to the [Nanite plugin catalog](https://plugins.nanite.hollislabs.dev)
+and install by id:
+
+```sh
+nanite plugin install {{ .inputs.plugin_name }}
+```
+
+## Capabilities
+
+This plugin implements:
+
+- `subprocess.Plugin` — `Init` / `Load` / `Unload`
+{{- if .inputs.handler_command }}
+- `subprocess.CommandHandler` — handles `/{{ .inputs.plugin_name }}` slash command
+{{- end }}
+{{- if .inputs.handler_event }}
+- `subprocess.EventHandler` — subscribes to `message.sent` host events
+{{- end }}
+{{- if .inputs.handler_mcp }}
+- `subprocess.MCPHandler` — serves MCP tools registered in `plugin.yaml`
+{{- end }}
+{{- if .inputs.handler_http }}
+- `subprocess.HTTPHandler` — handles HTTP routes registered in `plugin.yaml`
+{{- end }}
+
+## Build
+
+```sh
+make build         # native binary at ./{{ .inputs.plugin_name }}
+make test          # go test ./...
+make vet           # go vet ./...
+{{- if .inputs.include_ui }}
+make build-ui      # vite-build the UI bundle into ui/dist/
+{{- end }}
+make release       # cross-compile + assemble per-platform archives in dist/archives/
+```
+
+## Release signing
+
+`make release` signs each archive when `{{ .computed.signing_key_env }}` is set
+to a base64-encoded Ed25519 private key. Generate a development keypair once:
+
+```sh
+make keygen
+```
+
+This writes `dev-signing-key.pub` (commit it) and prints the matching private
+key — capture it in a password manager and export as `{{ .computed.signing_key_env }}`
+when invoking `make release`.
+
+## Layout
+
+```
+.
+├── plugin.yaml                   plugin manifest (v1 schema)
+├── main.go                       subprocess entrypoint
+{{- if .inputs.handler_command }}
+├── command.go                    /{{ .inputs.plugin_name }} slash-command handler
+{{- end }}
+{{- if .inputs.handler_event }}
+├── event.go                      host-event handler
+{{- end }}
+{{- if .inputs.handler_mcp }}
+├── mcp.go                        MCP tool dispatcher
+{{- end }}
+{{- if .inputs.handler_http }}
+├── http.go                       HTTP route handler
+{{- end }}
+{{- if .inputs.include_envelopes }}
+├── envelopes/                    JSON Schemas for emitted envelope types
+{{- end }}
+{{- if .inputs.include_ui }}
+├── ui/                           React component + Vite build
+{{- end }}
+├── cmd/sign/                     release-time signing helper
+├── Makefile                      build + release orchestration
+└── README.md                     this file
+```
+
+## License
+
+{{ .inputs.license }} — see [LICENSE](./LICENSE).

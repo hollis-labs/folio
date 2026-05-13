@@ -63,6 +63,7 @@ directory; ` + "`folio plan`" + ` previews the same render without writing.`,
 	}
 
 	root.AddCommand(newCmd(bundledFS, version))
+	root.AddCommand(makeCmd(bundledFS, version))
 	root.AddCommand(planCmd(bundledFS, version))
 	root.AddCommand(presetCmd(bundledFS, version))
 

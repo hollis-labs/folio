@@ -1,0 +1,72 @@
+schema_version: 1
+id: {{ .inputs.plugin_name }}
+name: {{ .computed.plugin_title }}
+version: 0.1.0
+description: {{ .inputs.description | quote }}
+author: {{ .inputs.author | quote }}
+license: {{ .inputs.license }}
+homepage: https://github.com/{{ .inputs.github_owner }}/nanite-plugin-{{ .inputs.plugin_name }}
+repository: https://github.com/{{ .inputs.github_owner }}/nanite-plugin-{{ .inputs.plugin_name }}
+protocol: 1
+runtime: subprocess
+entrypoint: ./{{ .inputs.plugin_name }}
+load_type: auto
+
+nanite_compat:
+  min: {{ .inputs.nanite_compat_min }}
+
+config: {}
+
+registers:
+{{- if .inputs.include_envelopes }}
+  envelopes:
+    - type: {{ .computed.envelope_type }}
+      component: {{ .computed.plugin_title }}Card
+      version: 1
+      schema: envelopes/{{ .computed.envelope_type }}.schema.json
+{{- end }}
+{{- if .inputs.handler_command }}
+  commands:
+    - name: {{ .inputs.plugin_name }}
+      description: {{ .inputs.description | quote }}
+      args:
+        - name: query
+          type: string
+          required: false
+          description: Free-form argument forwarded to the plugin's Command handler
+{{- end }}
+{{- if .inputs.handler_event }}
+  events:
+    - types: [message.sent]
+      handler: onMessageSent
+      priority: 0
+{{- end }}
+{{- if .inputs.handler_mcp }}
+  mcp_servers:
+    - name: {{ .inputs.plugin_name }}
+      description: {{ .inputs.description | quote }}
+      tools:
+        - example
+{{- end }}
+{{- if .inputs.handler_http }}
+  http_routes:
+    - method: GET
+      path: /plugins/{{ .inputs.plugin_name }}/hello
+      handler: hello
+{{- end }}
+{{- if .inputs.include_ui }}
+
+ui:
+  bundle_dir: ui/dist
+  entry: index.js
+  stylesheet: style.css
+  react_version: ^18.0.0
+{{- end }}
+
+release:
+  platforms:
+    - darwin-arm64
+    - darwin-amd64
+    - linux-amd64
+    - linux-arm64
+    - windows-amd64
