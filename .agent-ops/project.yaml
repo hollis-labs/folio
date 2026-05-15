@@ -1,0 +1,57 @@
+project:
+  id: folio
+  display_name: Folio
+  status: active
+  purpose: |
+    Preset-driven project scaffolding for the hollis-labs portfolio. A single
+    Go CLI binary that renders typed presets (YAML manifest + text/template
+    file tree) into new project directories, recording a .folio.yaml
+    breadcrumb (preset identity, resolved inputs, computed values, per-file
+    SHA-256 digests) for later re-render and future sync. Supports preset
+    composition: presets layer on each other via semver-pinned composes:
+    entries. Currently at v0.2 (unreleased, the composition slice).
+catalog:
+  torque_project_id: null          # no catalog entry found at ~/.tether/catalog/projects/folio.yaml
+  cerberus_project_id: null         # not a Cerberus-managed project
+  tether_catalog_project: null      # ~/.tether/catalog/projects/folio.yaml does not exist
+locations:
+  repo: ~/dev/hollis-labs/tools/folio
+  agent_os_tracking: ~/dev/agent-os/workspaces/execution/folio
+  state_dir: null                   # CLI tool — no persistent state directory
+  catalog: null
+  artifacts: null                   # not Cerberus-built
+build:
+  authority: github_actions         # CI is GitHub Actions (.github/workflows/ci.yml); local builds via Makefile
+  resource: null                    # not a Cerberus resource
+  command: make build               # go build -o folio ./cmd/folio
+deployment:
+  type: none                        # distributed via `go install`; no service deployment
+  service_name: null
+  binary: null
+docs:
+  readme: README.md
+  architecture: null                # no docs/ directory; design notes live in planning/
+  adrs: null
+  roadmap: null                     # roadmap surface is CHANGELOG.md deferred lists + planning/userland-installs/
+roadmap:
+  current_phase: 'v0.2 unreleased — composition slice'
+  pointer: null
+usage_examples:
+  - intent: Scaffold a new minimal Go project
+    command: folio new base <dir> --input project_name=<name> --input github_owner=<owner> --non-interactive
+    note: Drop --non-interactive to be prompted for missing inputs.
+  - intent: Scaffold a Go library project (layered preset)
+    command: folio new go-package <dir> --input project_name=<name> --input github_owner=<owner> --input package_name=<pkg> --non-interactive
+    note: go-package composes on base; both layers' inputs must be supplied.
+  - intent: Preview a render without writing files
+    command: folio plan <preset> <dir> --input project_name=<name> --non-interactive
+    note: Prints resolved inputs, computed values, and planned file list only.
+  - intent: Validate a preset definition
+    command: folio preset validate presets/<id>
+    note: Runs the v0 validation rule set against the preset.yaml.
+  - intent: Run the full pre-commit pipeline
+    command: make all
+    note: tidy + vet + lint + test-race; matches CI.
+scopes:
+  - folio.backend.main
+related_projects: [hadron, nanite, tether]
