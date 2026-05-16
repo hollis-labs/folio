@@ -1,0 +1,66 @@
+folio_version: "0.1"
+id: sysop-ui
+version: 1.0.0
+description: Sysop UI app — a libs/sysop-ui React frontend served by a Go binary via libs/go-webui
+author: hollis-labs
+license: MIT
+
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go module + binary name (lowercase, snake_case)
+
+  - name: github_owner
+    type: string
+    required: true
+    default: hollis-labs
+    description: GitHub org or user that hosts the project repo
+
+  - name: description
+    type: string
+    default: ""
+    description: One-line project description
+
+  - name: base_path
+    type: string
+    default: /sysop
+    description: URL path the Sysop UI is mounted at — leading slash, no trailing slash (e.g. /sysop)
+
+  - name: sysop_ui_version
+    type: string
+    default: v0.1.0
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: "@hollis-labs/sysop-ui git tag to depend on (v-prefixed semver)"
+
+  - name: go_webui_version
+    type: string
+    default: v0.1.0
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: github.com/hollis-labs/go-webui module version (v-prefixed semver)
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
+  app_title: "{{ pascalCase .inputs.project_name }}"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    - glob: "Makefile"
+      policy: overwrite
+    - glob: ".github/workflows/**"
+      policy: overwrite
+    - glob: "go.mod"
+      policy: skip
+    - glob: "internal/**"
+      policy: skip
+    - glob: "web/src/**"
+      policy: skip
+    - glob: "README.md"
+      policy: three-way

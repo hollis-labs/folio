@@ -9,11 +9,18 @@ re-rendered later (and, in a future release, synced when the preset evolves).
 
 ## Status
 
-v0.2 — composition slice. Two bundled presets: the minimal `base` (a Go
-module scaffold) and `go-package` (an `internal/<pkg>/` library layered on
-top of `base`). `folio new` / `folio plan` / `folio preset validate` all
-understand `composes:`. Sync, post-render Hadron hooks, federated git-URL
-preset sources, and MCP / HTTP surfaces are deliberately deferred; see
+v0.2 — composition slice. Bundled presets:
+
+| Preset | Scaffolds |
+|---|---|
+| `base` | A minimal Go module |
+| `go-package` | An `internal/<pkg>/` library layered on `base` |
+| `nanite-plugin` | A Nanite subprocess plugin (Go binary + `plugin.yaml` + optional UI) |
+| `sysop-ui` | A Sysop UI app — a `@hollis-labs/sysop-ui` React frontend served by a Go binary via `go-webui` |
+
+`folio new` / `folio plan` / `folio preset validate` all understand
+`composes:`. Sync, post-render Hadron hooks, federated git-URL preset
+sources, and MCP / HTTP surfaces are deliberately deferred; see
 [`CHANGELOG.md`](./CHANGELOG.md) for the full deferred list.
 
 ## Quickstart

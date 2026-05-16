@@ -42,6 +42,15 @@ real semver constraint resolver, with the first bundled composing preset
   test, overwrites `README.md` and the base `cmd/<project>/main.go` with a
   library-first stub. Exercises both the additive and overwrite directions
   of composition.
+- **`sysop-ui` bundled preset.** `folio new sysop-ui <dir>` scaffolds a
+  complete Sysop UI app in one command: a `@hollis-labs/sysop-ui` React
+  frontend (Vite + Tailwind v4, nav-rail shell, a starter page, a
+  same-origin API client) plus a Go binary that embeds the built frontend
+  and serves it through the shared `github.com/hollis-labs/go-webui`
+  harness. Ships `ui-build` / `ui-dev` Makefile targets; the frontend
+  builds straight into the Go `//go:embed` directory. Standalone (not
+  composed on `base`) — the Go-module-plus-frontend layout diverges too
+  far from `base` for an overlay to pay off.
 - **Multi-entry `.folio.yaml` `presets:`.** The array now carries every
   contributing layer in apply order; per-file `preset:` records the last
   layer that produced the file. Verified byte-identical round-trip.
