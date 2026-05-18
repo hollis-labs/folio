@@ -22,11 +22,14 @@ export function App() {
 
   return (
     <div className="flex h-screen bg-bg text-text">
-      <NavRail items={nav} logo={<Activity className="h-4 w-4" />} logoLabel="Sysop" />
+      <NavRail
+        items={nav}
+        logo={<Activity className="h-4 w-4" />}
+        logoLabel="Sysop"
+        footerExtra={<ThemeSwitcher />}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <PageHeader title="Dashboard">
-          <ThemeSwitcher />
-        </PageHeader>
+        <PageHeader title="Dashboard" />
         <main className="min-h-0 flex-1 overflow-auto">
           <DashboardPage />
         </main>

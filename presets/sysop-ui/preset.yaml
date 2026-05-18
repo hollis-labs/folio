@@ -1,6 +1,6 @@
 folio_version: "0.1"
 id: sysop-ui
-version: 1.0.0
+version: 1.1.0
 description: Sysop UI app — a libs/sysop-ui React frontend served by a Go binary via libs/go-webui
 author: hollis-labs
 license: MIT
@@ -30,7 +30,7 @@ inputs:
 
   - name: sysop_ui_version
     type: string
-    default: v0.1.0
+    default: v0.4.0
     pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
     description: "@hollis-labs/sysop-ui git tag to depend on (v-prefixed semver)"
 
@@ -60,7 +60,7 @@ sync:
       policy: skip
     - glob: "internal/**"
       policy: skip
-    - glob: "web/src/**"
+    - glob: "frontend/src/**"
       policy: skip
     - glob: "README.md"
       policy: three-way

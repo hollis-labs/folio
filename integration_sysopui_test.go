@@ -56,16 +56,16 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 		"cmd/acme_sysop/main.go",
 		"internal/webui/embed.go",
 		"internal/webui/dist/.gitkeep",
-		"web/index.html",
-		"web/package.json",
-		"web/tsconfig.json",
-		"web/vite.config.ts",
-		"web/src/main.tsx",
-		"web/src/App.tsx",
-		"web/src/index.css",
-		"web/src/pages/dashboard.tsx",
-		"web/src/api/client.ts",
-		"web/src/api/context.tsx",
+		"frontend/index.html",
+		"frontend/package.json",
+		"frontend/tsconfig.json",
+		"frontend/vite.config.ts",
+		"frontend/src/main.tsx",
+		"frontend/src/App.tsx",
+		"frontend/src/index.css",
+		"frontend/src/pages/dashboard.tsx",
+		"frontend/src/api/client.ts",
+		"frontend/src/api/context.tsx",
 	}
 	for _, p := range want {
 		if _, statErr := os.Stat(filepath.Join(target, filepath.FromSlash(p))); statErr != nil {
@@ -97,13 +97,13 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 	}
 
 	// package.json — the sysop-ui kit as a pinned git dependency.
-	pkg := readFile(t, target, "web/package.json")
-	if !strings.Contains(pkg, `"@hollis-labs/sysop-ui": "github:hollis-labs/sysop-ui#v0.1.0"`) {
-		t.Errorf("web/package.json missing pinned sysop-ui git dependency:\n%s", pkg)
+	pkg := readFile(t, target, "frontend/package.json")
+	if !strings.Contains(pkg, `"@hollis-labs/sysop-ui": "github:hollis-labs/sysop-ui#v0.4.0"`) {
+		t.Errorf("frontend/package.json missing pinned sysop-ui git dependency:\n%s", pkg)
 	}
 
 	// vite.config.ts — base path + the build output aimed at the Go embed dir.
-	vite := readFile(t, target, "web/vite.config.ts")
+	vite := readFile(t, target, "frontend/vite.config.ts")
 	if !strings.Contains(vite, "base: '/sysop/'") {
 		t.Errorf("vite.config.ts missing base path:\n%s", vite)
 	}
@@ -113,7 +113,7 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 
 	// Makefile — the ui-build / ui-dev targets are the headline feature.
 	makefile := readFile(t, target, "Makefile")
-	for _, tgt := range []string{"ui-build:", "ui-dev:", "build:"} {
+	for _, tgt := range []string{"ui-build:", "ui-dev:", "build:", "install:"} {
 		if !strings.Contains(makefile, tgt) {
 			t.Errorf("Makefile missing %q target:\n%s", tgt, makefile)
 		}
@@ -162,7 +162,7 @@ func TestIntegration_SysopUIPreset_CustomBasePath(t *testing.T) {
 	if embed := readFile(t, target, "internal/webui/embed.go"); !strings.Contains(embed, `BasePath = "/ops"`) {
 		t.Errorf("embed.go did not pick up custom base_path:\n%s", embed)
 	}
-	if vite := readFile(t, target, "web/vite.config.ts"); !strings.Contains(vite, "base: '/ops/'") {
+	if vite := readFile(t, target, "frontend/vite.config.ts"); !strings.Contains(vite, "base: '/ops/'") {
 		t.Errorf("vite.config.ts did not pick up custom base_path:\n%s", vite)
 	}
 }
