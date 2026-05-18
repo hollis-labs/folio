@@ -1,0 +1,49 @@
+folio_version: "0.1"
+id: go-lib
+version: 0.1.0
+description: Importable Go shared library — module-root package, no cmd/ or internal/
+author: hollis-labs
+license: MIT
+
+# Standalone, NOT composed on `base`. The `base` preset is binary-oriented
+# (it scaffolds cmd/<project>/main.go + a build Makefile) and its
+# project_name input forbids hyphens, so it cannot express a `go-*` repo
+# name. A shared library is a distinct atom: an importable package at the
+# module root, no cmd/, no internal/, no Makefile — matching the
+# hand-built libs/go-providers and libs/go-agent-launch layout.
+
+inputs:
+  - name: repo_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Repository / Go module name (lowercase, hyphens allowed, e.g. go-apppaths)
+  - name: package_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9]*$"
+    description: Go package identifier (lowercase, no separators, e.g. paths)
+  - name: github_owner
+    type: string
+    default: hollis-labs
+    description: GitHub username or org
+  - name: description
+    type: string
+    default: ""
+    description: One-line library description
+  - name: go_version
+    type: string
+    default: "1.26.1"
+    description: Go toolchain version for the go.mod go directive
+  - name: copyright_holder
+    type: string
+    default: Hollis Labs
+    description: Copyright holder named in the LICENSE file
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.repo_name }}"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl

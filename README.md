@@ -15,6 +15,7 @@ v0.2 — composition slice. Bundled presets:
 |---|---|
 | `base` | A minimal Go module |
 | `go-package` | An `internal/<pkg>/` library layered on `base` |
+| `go-lib` | An importable Go shared library — module-root package, no `cmd/`/`internal/` |
 | `nanite-plugin` | A Nanite subprocess plugin (Go binary + `plugin.yaml` + optional UI) |
 | `sysop-ui` | A Sysop UI app — a `@hollis-labs/sysop-ui` React frontend served by a Go binary via `go-webui` |
 

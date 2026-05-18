@@ -1,0 +1,50 @@
+# {{ .inputs.repo_name }}
+
+{{ if .inputs.description }}{{ .inputs.description }}
+{{ else }}A hollis-labs shared Go library.
+{{ end }}
+Module path: `{{ .computed.module_path }}`
+Library package: `{{ .computed.module_path }}/{{ .inputs.package_name }}`
+
+## Install
+
+```sh
+go get {{ .computed.module_path }}/{{ .inputs.package_name }}
+```
+
+## Usage
+
+```go
+import "{{ .computed.module_path }}/{{ .inputs.package_name }}"
+```
+
+## Layout
+
+Scaffolded from folio's `go-lib` preset — an importable shared-library layout
+(a package at the module root, no `cmd/`, no `internal/`).
+
+```
+.
+├── {{ .inputs.package_name }}/   # Library package — importable by other modules
+├── examples/                     # Runnable usage examples
+├── go.mod
+├── CHANGELOG.md
+└── README.md (this file)
+```
+
+## Development
+
+```sh
+go test -race ./...   # tests
+go vet ./...          # vet
+gofmt -l .            # formatting check (no output = clean)
+golangci-lint run     # lint
+govulncheck ./...     # vulnerability scan
+```
+
+CI (`.github/workflows/check.yml`) runs the same checks on push and pull
+request to `main`.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

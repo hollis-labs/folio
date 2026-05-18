@@ -42,6 +42,15 @@ real semver constraint resolver, with the first bundled composing preset
   test, overwrites `README.md` and the base `cmd/<project>/main.go` with a
   library-first stub. Exercises both the additive and overwrite directions
   of composition.
+- **`go-lib` bundled preset.** `folio new go-lib <dir>` scaffolds an
+  importable Go shared library — a package at the module root (no `cmd/`,
+  no `internal/`, no Makefile), plus `CHANGELOG.md`, MIT `LICENSE`, an
+  `examples/` placeholder, and a `check.yml` CI workflow (gofmt, vet,
+  golangci-lint, `test -race`, govulncheck). Reproduces the hand-built
+  `libs/go-providers` / `libs/go-agent-launch` layout so portfolio shared
+  libraries stop being hand-assembled. Standalone (not composed on
+  `base`): `base` is binary-oriented and its `project_name` input forbids
+  the hyphen a `go-*` module name needs.
 - **`sysop-ui` bundled preset.** `folio new sysop-ui <dir>` scaffolds a
   complete Sysop UI app in one command: a `@hollis-labs/sysop-ui` React
   frontend (Vite + Tailwind v4, nav-rail shell, a starter page, a
@@ -106,6 +115,13 @@ order. The generated tree passes `go vet`, `go build`, `go test` clean.
 
 ### Fixed (review pass)
 
+- **Read-only generated files** — The render engine copied each source
+  template's permission bits verbatim. Bundled presets live in an
+  `embed.FS`, which reports every file as `0o444`, so scaffolded projects
+  landed read-only: `go mod tidy` and ordinary edits failed with
+  "permission denied". `render` now OR-s `0o644` into the resolved mode —
+  generated files are always owner-writable, while executable bits from a
+  real-filesystem source preset are still preserved.
 - **Diamond compose-entry binding** — In compose graphs where the same
   preset is reached via two parents, `LayerRef.ComposeEntry` now records
   the FIRST parent's entry (declared-order encounter, locked in

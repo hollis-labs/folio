@@ -1,0 +1,8 @@
+// Package {{ .inputs.package_name }} is the public API of the
+// {{ .computed.module_path }} shared library.
+{{ if .inputs.description }}//
+// {{ .inputs.description }}
+{{ end }}//
+// This file carries the package-level documentation; the exported API
+// lives in the sibling source files.
+package {{ .inputs.package_name }}

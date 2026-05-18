@@ -179,9 +179,16 @@ func RenderTree(opts TreeOptions, ctx Context) (TreeResult, error) {
 			return nil
 		}
 
+		// Generated files are always at least 0o644: the owner must be able
+		// to edit a freshly-scaffolded project. Bundled presets live in an
+		// embed.FS, which reports every file as 0o444 (read-only) — copying
+		// that mode verbatim produced un-editable trees where `go mod tidy`
+		// and ordinary edits failed with "permission denied". OR-ing in
+		// 0o644 fixes that while still preserving any executable bits a
+		// real-filesystem source preset carries.
 		mode := fs.FileMode(0o644)
 		if fi, err := d.Info(); err == nil {
-			mode = fi.Mode().Perm()
+			mode = fi.Mode().Perm() | 0o644
 		}
 
 		ext := strings.ToLower(path.Ext(renderedRel))
