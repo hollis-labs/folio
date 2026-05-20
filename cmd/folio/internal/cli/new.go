@@ -1,14 +1,18 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	gh "github.com/hollis-labs/folio/internal/github"
 	"github.com/hollis-labs/folio/service"
 )
 
@@ -22,6 +26,7 @@ func newCmd(bundledFS fs.FS, version string) *cobra.Command {
 		},
 	}
 	addGenerateFlags(cmd)
+	addGitHubFlags(cmd)
 	cmd.Flags().Bool("plan", false, "Plan only — show what would be rendered and exit")
 	cmd.Flags().Bool("yes", false, "Skip the summary-confirmation prompt")
 	return cmd
@@ -46,6 +51,72 @@ func addGenerateFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("non-interactive", false, "Fail on missing required inputs instead of prompting")
 	cmd.Flags().BoolP("quiet", "q", false, "Suppress informational output")
 	cmd.Flags().BoolP("verbose", "v", false, "Print verbose progress")
+}
+
+// addGitHubFlags registers the GitHub-automation flag set. Only `folio new`
+// wires these — `folio plan` is render-only and never publishes.
+func addGitHubFlags(cmd *cobra.Command) {
+	cmd.Flags().Bool("create-github-repo", false, "After render, create a GitHub repo and push the initial commit (requires gh CLI)")
+	cmd.Flags().String("github-owner", "", "GitHub owner (org or user). Defaults to inputs.github_owner when present.")
+	cmd.Flags().String("github-repo", "", "GitHub repo name. Defaults to basename(<target-dir>).")
+	cmd.Flags().String("github-visibility", "private", "GitHub repo visibility: public|private|internal")
+	cmd.Flags().String("github-description", "", "GitHub repo description. Defaults to inputs.description when present.")
+	cmd.Flags().String("github-branch", "main", "Default branch name")
+	cmd.Flags().Bool("github-no-push", false, "Create the repo and remote, but do not push the initial commit")
+}
+
+// githubOptions is the resolved per-invocation snapshot pulled from CLI
+// flags + the resolved inputs map. Empty when --create-github-repo was
+// not set.
+type githubOptions struct {
+	Enabled     bool
+	Owner       string
+	Repo        string
+	Visibility  string
+	Description string
+	Branch      string
+	Push        bool
+}
+
+func resolveGitHubOptions(cmd *cobra.Command, inputs map[string]any, targetDir string) (githubOptions, error) {
+	if cmd.Flags().Lookup("create-github-repo") == nil {
+		return githubOptions{}, nil
+	}
+	enabled, _ := cmd.Flags().GetBool("create-github-repo")
+	if !enabled {
+		return githubOptions{}, nil
+	}
+	owner, _ := cmd.Flags().GetString("github-owner")
+	if owner == "" {
+		if v, ok := inputs["github_owner"].(string); ok {
+			owner = v
+		}
+	}
+	if owner == "" {
+		return githubOptions{}, fmt.Errorf("--github-owner not supplied and inputs.github_owner is empty")
+	}
+	repo, _ := cmd.Flags().GetString("github-repo")
+	if repo == "" {
+		repo = filepath.Base(targetDir)
+	}
+	visibility, _ := cmd.Flags().GetString("github-visibility")
+	description, _ := cmd.Flags().GetString("github-description")
+	if description == "" {
+		if v, ok := inputs["description"].(string); ok {
+			description = v
+		}
+	}
+	branch, _ := cmd.Flags().GetString("github-branch")
+	noPush, _ := cmd.Flags().GetBool("github-no-push")
+	return githubOptions{
+		Enabled:     true,
+		Owner:       owner,
+		Repo:        repo,
+		Visibility:  visibility,
+		Description: description,
+		Branch:      branch,
+		Push:        !noPush,
+	}, nil
 }
 
 func runGenerate(cmd *cobra.Command, args []string, bundledFS fs.FS, version string, planOnly bool) error {
@@ -123,6 +194,16 @@ func runGenerate(cmd *cobra.Command, args []string, bundledFS fs.FS, version str
 		}
 	}
 
+	ghOpts, err := resolveGitHubOptions(cmd, inputs, targetDir)
+	if err != nil {
+		return err
+	}
+	if ghOpts.Enabled {
+		if preErr := gh.Preflight(cmd.Context(), gh.ExecRunner{}); preErr != nil {
+			return preErr
+		}
+	}
+
 	res, err := svc.New(opts)
 	if err != nil {
 		return err
@@ -140,7 +221,68 @@ func runGenerate(cmd *cobra.Command, args []string, bundledFS fs.FS, version str
 		}
 	}
 
+	if ghOpts.Enabled {
+		if err := publishToGitHub(cmd, svc, targetDir, ghOpts, quiet); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// publishToGitHub runs Service.PublishToGitHub against the just-rendered
+// project. On failure, it prints a clear retry hint (the local tree is
+// already on disk) and returns the error so the CLI exits non-zero.
+func publishToGitHub(cmd *cobra.Command, svc *service.Service, targetDir string, opts githubOptions, quiet bool) error {
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	res, err := svc.PublishToGitHub(ctx, service.PublishOptions{
+		TargetDir:   targetDir,
+		Owner:       opts.Owner,
+		Repo:        opts.Repo,
+		Visibility:  opts.Visibility,
+		Description: opts.Description,
+		Branch:      opts.Branch,
+		Push:        opts.Push,
+	})
+	if err != nil {
+		var sErr *service.Error
+		errors.As(err, &sErr)
+		printPublishRetryHint(cmd, targetDir, opts, sErr)
+		return err
+	}
+	if !quiet {
+		if res.Pushed {
+			fmt.Fprintf(cmd.OutOrStdout(), "folio: published to %s (branch %s)\n", res.URL, res.Branch)
+		} else {
+			fmt.Fprintf(cmd.OutOrStdout(), "folio: created %s (no push — run `git push -u origin %s` when ready)\n", res.URL, res.Branch)
+		}
+	}
+	return nil
+}
+
+// printPublishRetryHint emits an actionable retry command. The render is
+// preserved on disk; the user just has to re-run the gh step from the
+// target dir. Keeps stderr/stdout disciplined: hint goes to stderr so it
+// doesn't get mixed into normal stdout consumers.
+func printPublishRetryHint(cmd *cobra.Command, targetDir string, opts githubOptions, sErr *service.Error) {
+	w := cmd.ErrOrStderr()
+	fmt.Fprintf(w, "\nfolio: render succeeded at %s, but GitHub publish failed.\n", targetDir)
+	if sErr != nil && sErr.Code != "" {
+		fmt.Fprintf(w, "folio: code=%s\n", sErr.Code)
+	}
+	pushFlag := ""
+	if opts.Push {
+		pushFlag = " --push"
+	}
+	descFlag := ""
+	if opts.Description != "" {
+		descFlag = fmt.Sprintf(" --description %q", opts.Description)
+	}
+	fmt.Fprintf(w, "folio: retry manually:\n  cd %s\n  gh repo create %s/%s --%s --source=. --remote=origin%s%s\n",
+		targetDir, opts.Owner, opts.Repo, opts.Visibility, descFlag, pushFlag)
 }
 
 func printPlan(cmd *cobra.Command, res service.PlanResult, presetID, targetDir string, verbose bool) {

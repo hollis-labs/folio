@@ -8,9 +8,44 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 Composition slice. `composes:` becomes a working layered render driving a
 real semver constraint resolver, with the first bundled composing preset
-(`go-package`) layering an internal library on top of `base`.
+(`go-package`) layering an internal library on top of `base`. Adds an
+opt-in `--create-github-repo` flow that runs after a successful render
+and publishes the generated tree to GitHub via the user's `gh` CLI.
 
 ### Added
+
+- **GitHub publish flow (opt-in, CLI-driven).** `folio new` gains
+  `--create-github-repo` plus `--github-owner`, `--github-repo`,
+  `--github-visibility` (`public`/`private`/`internal`, default
+  `private`), `--github-description`, `--github-branch` (default `main`),
+  and `--github-no-push`. When the flag is set, folio preflights the
+  user's `gh` and `git` binaries + `gh auth status` BEFORE rendering,
+  runs the normal render, then `git init` + initial commit + `gh repo
+  create --source=. --remote=origin [--push]`. On a publish failure the
+  local tree is preserved and the CLI prints an explicit `gh repo
+  create ...` retry command keyed to the resolved options. Defaults
+  pull from `inputs.github_owner` / `inputs.description` so the
+  bundled presets work without extra `--github-*` flags in the common
+  case. Branch protection / repo settings (issues, wiki, default-branch
+  rules) deferred to a follow-up — v0.2 ships repo creation + push
+  only.
+- **`internal/github/` package.** Wraps `gh` and a small `git` surface
+  behind a `Runner` interface so unit tests can substitute a fake exec
+  layer. Typed `*github.Error` carries stable codes (`gh_missing`,
+  `gh_unauthenticated`, `git_missing`, `repo_exists`, `publish_failed`)
+  that the CLI / future MCP envelopes pattern-match on.
+- **`Service.PublishToGitHub`.** Canonical service-layer entry point
+  for the publish flow. Symmetric with `Service.New` — `New` is
+  render-only, `PublishToGitHub` operates on an already-rendered tree.
+  Future MCP / HTTP surfaces wrap the same method without duplicating
+  the publish pipeline. Validates owner/repo/visibility and lifts
+  `internal/github` errors into the `service.ErrorCode` namespace.
+- **`integration_github_test.go` (gated).** End-to-end round-trip that
+  renders `base` and publishes to a real GitHub repo named
+  `folio-e2e-<unixnano>`, then deletes it. Gated on
+  `FOLIO_GH_E2E=1`; skipped in CI by default. `FOLIO_GH_E2E_OWNER`
+  overrides the owner (defaults to the `gh`-authenticated user).
+
 
 - **`composes:` runtime.** Presets can declare `composes: [{id, version,
   source: local, path, vars}]`; folio walks the compose DAG (cycle
