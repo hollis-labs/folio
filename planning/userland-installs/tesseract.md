@@ -4,8 +4,8 @@
 
 Tesseract is already close to an installed service shape:
 
-- `contextd serve` exists.
-- `contextd mcp` exists.
+- `tesseract serve` exists.
+- `tesseract mcp` exists.
 - Default root resolves to `~/.tesseract`.
 - Primary DB path is `data/index/context.db` under the root.
 - Queue DB is under `data/queue.db`.
@@ -15,16 +15,18 @@ Current risks:
 
 - CLI help/error output is rough compared with the other apps.
 - Naming remains mixed in places (`contextd`, Conduit/Vanta env names and
-  descriptions).
+  descriptions). **Resolved 2026-08-26:** the binary is `tesseract`, the
+  `CONTEXTD_ROOT` env var is retired, and the MCP tool surface is
+  `tesseract_*` / `context_*` / `memory_*` / `knowledge_*`.
 - Token/bootstrap story needs to be installer-friendly.
 - Folio needs a stable health endpoint and stable config path.
 
 ## Target Installed Contract
 
-Use `contextd` as the binary name for now unless a broader rename is scheduled.
+The installed binary is `tesseract` (renamed from `contextd` in v0.9.0, 2026-08-26).
 
 ```sh
-contextd serve \
+tesseract serve \
   --config "$ROOT/config/tesseract.yaml" \
   --root "$ROOT/tesseract" \
   --db "$ROOT/tesseract/data/index/context.db" \
@@ -32,7 +34,7 @@ contextd serve \
   --addr "127.0.0.1:8080" \
   --static-token "$TOKEN"
 
-contextd mcp \
+tesseract mcp \
   --config "$ROOT/config/tesseract.yaml" \
   --root "$ROOT/tesseract" \
   --static-token "$TOKEN"
@@ -41,9 +43,9 @@ contextd mcp \
 ## Required Work
 
 1. Modernize CLI help.
-   - `contextd --help`
-   - `contextd serve --help`
-   - `contextd mcp --help`
+   - `tesseract --help`
+   - `tesseract serve --help`
+   - `tesseract mcp --help`
    - consistent exit codes
 2. Add or confirm explicit flags:
    - `--config`
@@ -73,7 +75,7 @@ Installed Tether should render:
 ```yaml
 id: tesseract
 transport: stdio
-command: "${BIN_ROOT}/contextd"
+command: "${BIN_ROOT}/tesseract"
 args: ["mcp", "--config", "${ROOT}/config/tesseract.yaml"]
 env:
   TESSERACT_ROOT: "${ROOT}/tesseract"
@@ -91,7 +93,7 @@ env:
 
 ## Acceptance Criteria
 
-- `contextd serve` and `contextd mcp` use the same installed store.
+- `tesseract serve` and `tesseract mcp` use the same installed store.
 - Help text is clean enough for friend testers.
 - Folio doctor can verify HTTP readiness and MCP tool discovery.
 - Active install docs and configs use Tesseract naming.
