@@ -1,6 +1,6 @@
 folio_version: "0.1"
 id: sysop-ui
-version: 1.1.0
+version: 1.2.0
 description: Sysop UI app — a libs/sysop-ui React frontend served by a Go binary via libs/go-webui
 author: hollis-labs
 license: MIT
@@ -40,6 +40,22 @@ inputs:
     pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
     description: github.com/hollis-labs/go-webui module version (v-prefixed semver)
 
+  - name: go_version
+    type: string
+    default: "1.26.1"
+    pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    description: >-
+      Go language version. Renders into go.mod, the CI workflow and
+      golangci-lint's `go:` key from one input so the three cannot drift.
+
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks run against.
+      Override for repos where `./...` pulls in trees that should not gate a
+      commit.
+
 computed:
   module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
   app_title: "{{ pascalCase .inputs.project_name }}"
@@ -53,6 +69,15 @@ sync:
   default: prompt
   rules:
     - glob: "Makefile"
+      policy: overwrite
+    # Shared portfolio configs: folio is the canonical copy, so a re-render
+    # replaces them. A project needing a local deviation should get it added
+    # here as an input rather than editing the rendered file.
+    - glob: "lefthook.yml"
+      policy: overwrite
+    - glob: ".golangci.yml"
+      policy: overwrite
+    - glob: "frontend/biome.json"
       policy: overwrite
     - glob: ".github/workflows/**"
       policy: overwrite

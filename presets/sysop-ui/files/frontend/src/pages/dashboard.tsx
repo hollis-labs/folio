@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { EmptyState, SummaryCards } from '@hollis-labs/sysop-ui'
-import { useApi } from '../api/context'
-import type { HealthInfo } from '../api/client'
+import { EmptyState, SummaryCards } from "@hollis-labs/sysop-ui"
+import { useEffect, useState } from "react"
+import type { HealthInfo } from "../api/client"
+import { useApi } from "../api/context"
 
 /**
  * Starter page — polls the same-origin /api/health endpoint and shows the
@@ -29,20 +29,14 @@ export function DashboardPage() {
   }, [api])
 
   if (error) {
-    return (
-      <EmptyState
-        variant="error"
-        title="Could not reach the server"
-        description={error}
-      />
-    )
+    return <EmptyState variant="error" title="Could not reach the server" description={error} />
   }
 
   return (
     <SummaryCards
       cards={[
-        { label: 'Server', value: health ? health.status : '…' },
-        { label: 'UI', value: 'ready' },
+        { label: "Server", value: health ? health.status : "…" },
+        { label: "UI", value: "ready" },
       ]}
     />
   )

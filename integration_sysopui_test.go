@@ -104,10 +104,10 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 
 	// vite.config.ts — base path + the build output aimed at the Go embed dir.
 	vite := readFile(t, target, "frontend/vite.config.ts")
-	if !strings.Contains(vite, "base: '/sysop/'") {
+	if !strings.Contains(vite, `base: "/sysop/"`) {
 		t.Errorf("vite.config.ts missing base path:\n%s", vite)
 	}
-	if !strings.Contains(vite, "outDir: '../internal/webui/dist'") {
+	if !strings.Contains(vite, `outDir: "../internal/webui/dist"`) {
 		t.Errorf("vite.config.ts does not target the Go embed dir:\n%s", vite)
 	}
 
@@ -162,7 +162,7 @@ func TestIntegration_SysopUIPreset_CustomBasePath(t *testing.T) {
 	if embed := readFile(t, target, "internal/webui/embed.go"); !strings.Contains(embed, `BasePath = "/ops"`) {
 		t.Errorf("embed.go did not pick up custom base_path:\n%s", embed)
 	}
-	if vite := readFile(t, target, "frontend/vite.config.ts"); !strings.Contains(vite, "base: '/ops/'") {
+	if vite := readFile(t, target, "frontend/vite.config.ts"); !strings.Contains(vite, `base: "/ops/"`) {
 		t.Errorf("vite.config.ts did not pick up custom base_path:\n%s", vite)
 	}
 }

@@ -1,6 +1,6 @@
 folio_version: "0.1"
 id: go-lib
-version: 0.1.0
+version: 0.2.0
 description: Importable Go shared library — module-root package, no cmd/ or internal/
 author: hollis-labs
 license: MIT
@@ -39,6 +39,13 @@ inputs:
     type: string
     default: Hollis Labs
     description: Copyright holder named in the LICENSE file
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks run against.
+      Override for repos where `./...` pulls in trees that should not gate a
+      commit.
 
 computed:
   module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.repo_name }}"
@@ -47,3 +54,14 @@ computed:
 files:
   source: ./files
   template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    # Shared portfolio configs: folio is the canonical copy, so a re-render
+    # replaces them. A project needing a local deviation should get it added
+    # here as an input rather than editing the rendered file.
+    - glob: "lefthook.yml"
+      policy: overwrite
+    - glob: ".golangci.yml"
+      policy: overwrite
