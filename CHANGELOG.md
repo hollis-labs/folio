@@ -14,6 +14,29 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
 
 ### Added
 
+- **Shared portfolio hook configs are now folio's to own.** `lefthook.yml`
+  and `.golangci.yml` ship from the `base`, `go-lib`, `nanite-plugin` and
+  `sysop-ui` presets, replacing per-repo copies whose headers pointed at a
+  `mentat` reference repo that no longer exists. With no live upstream the
+  copies had silently forked: all four `.golangci.yml` in the portfolio
+  differed, and so did the two `lefthook.yml`. The rendered header now names
+  the folio preset as the canonical copy, and `sync` marks both files
+  `overwrite` so a re-render restores them.
+- **`go_version` and `go_packages` inputs.** `go_version` renders into
+  `go.mod`, the CI workflow and golangci-lint's `go:` key from one value so
+  the three cannot drift (the previous copies disagreed: `go: "1.25"` against
+  a `go.mod` saying `1.23`). `go_packages` (default `./...`) parameterises the
+  package pattern the `go-vet` / `go-test` hooks run against — the exact
+  deviation that forked one repo's copy by hand.
+- **A frontend lint hook that actually runs.** `sysop-ui` and
+  `nanite-plugin` (under `include_ui`) render a `frontend-lint` command
+  invoking the lockfile-installed `./node_modules/.bin/biome`, plus a
+  `biome.json` and a pinned `@biomejs/biome` devDependency. The hook it
+  replaces ran `npx biome`, which does not resolve `@biomejs/biome` — it
+  fetches `biome`, an unrelated env-var tool last published in 2016 whose CLI
+  exits 0 on every input, including invalid TypeScript. Four portfolio repos
+  shipped that hook and none of them ever linted anything. `base` and
+  `go-lib` deliberately carry no frontend hook at all.
 - **GitHub publish flow (opt-in, CLI-driven).** `folio new` gains
   `--create-github-repo` plus `--github-owner`, `--github-repo`,
   `--github-visibility` (`public`/`private`/`internal`, default
@@ -130,6 +153,11 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
   inputs/computed; that work moves to `service.composedLayers` so each
   layer (composed or single-preset) resolves uniformly against its own
   declared schema.
+- **`sysop-ui` frontend sources are biome-clean.** `frontend/src/**` and
+  `vite.config.ts` were reformatted to the shipped `biome.json` so a freshly
+  rendered project passes its own pre-commit hook rather than failing on its
+  first commit. `sysop-ui`'s `.github/workflows/ci.yml` became `ci.yml.tmpl`
+  to carry `go_version`.
 
 ### Composition example
 

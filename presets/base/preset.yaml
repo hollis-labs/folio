@@ -1,6 +1,6 @@
 folio_version: "0.1"
 id: base
-version: 0.1.0
+version: 0.2.0
 description: Minimal Go project layout — folio's atom preset
 author: hollis-labs
 license: MIT
@@ -19,6 +19,20 @@ inputs:
     type: string
     default: ""
     description: One-line project description
+  - name: go_version
+    type: string
+    default: "1.23"
+    pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    description: >-
+      Go language version. Renders into go.mod, the CI workflow and
+      golangci-lint's `go:` key from one input so the three cannot drift.
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks run against.
+      Override for repos where `./...` pulls in trees that should not gate a
+      commit.
 
 computed:
   module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
@@ -32,6 +46,13 @@ sync:
   default: prompt
   rules:
     - glob: "Makefile"
+      policy: overwrite
+    # Shared portfolio configs: folio is the canonical copy, so a re-render
+    # replaces them. A project needing a local deviation should get it added
+    # here as an input rather than editing the rendered file.
+    - glob: "lefthook.yml"
+      policy: overwrite
+    - glob: ".golangci.yml"
       policy: overwrite
     - glob: ".github/workflows/**"
       policy: overwrite

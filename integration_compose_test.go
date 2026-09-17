@@ -125,7 +125,7 @@ func TestIntegration_ComposingGoPackagePreset(t *testing.T) {
 	wantPresets := []struct {
 		ID, Version string
 	}{
-		{"base", "0.1.0"},
+		{"base", "0.2.0"},
 		{"go-package", "1.0.0"},
 	}
 	for i, want := range wantPresets {
@@ -147,6 +147,8 @@ func TestIntegration_ComposingGoPackagePreset(t *testing.T) {
 		"LICENSE":                          "base",
 		"Makefile":                         "base",
 		"go.mod":                           "base",
+		"lefthook.yml":                     "base",
+		".golangci.yml":                    "base",
 		"README.md":                        "go-package",
 		"cmd/smoke_compose/main.go":        "go-package",
 		"internal/greeter/greeter.go":      "go-package",
