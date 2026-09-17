@@ -52,7 +52,7 @@ func TestIntegration_NanitePluginPreset_MinimalCore(t *testing.T) {
 		"plugin.yaml",
 	}
 	for _, p := range want {
-		if _, err := os.Stat(filepath.Join(target, filepath.FromSlash(p))); err != nil {
+		if _, err = os.Stat(filepath.Join(target, filepath.FromSlash(p))); err != nil {
 			t.Errorf("expected %s, missing: %v", p, err)
 		}
 	}
@@ -66,7 +66,7 @@ func TestIntegration_NanitePluginPreset_MinimalCore(t *testing.T) {
 		"ui",
 	}
 	for _, p := range unwanted {
-		if _, err := os.Stat(filepath.Join(target, p)); err == nil {
+		if _, err = os.Stat(filepath.Join(target, p)); err == nil {
 			t.Errorf("did not expect %s in minimal scaffold", p)
 		}
 	}
@@ -140,7 +140,7 @@ func TestIntegration_NanitePluginPreset_AllHandlers(t *testing.T) {
 		"ui/src/components/KitchenCard.tsx",
 	}
 	for _, p := range want {
-		if _, err := os.Stat(filepath.Join(target, filepath.FromSlash(p))); err != nil {
+		if _, err = os.Stat(filepath.Join(target, filepath.FromSlash(p))); err != nil {
 			t.Errorf("expected %s, missing: %v", p, err)
 		}
 	}
