@@ -29,6 +29,15 @@ opt-in: `folio new --create-github-repo` runs `git init`, an initial commit and
 - `internal/manifest/digest.go` owns the breadcrumb's per-file digests.
 - `presets/` holds the bundled presets; the first directory level under it is
   the preset id.
+- `service.New`'s actual write to disk goes through
+  [`go-materialize`](https://github.com/hollis-labs/go-materialize)'s
+  `materialize.Engine` (atomic staged create, symlink/traversal-safe),
+  not a direct `os.WriteFile` loop — folio owns rendering (`internal/render`)
+  and its own `.folio.yaml` breadcrumb; the shared engine owns getting bytes
+  onto disk safely. Its own bookkeeping manifest
+  (`.materialize/manifest.json`) is removed after a successful write —
+  folio has no reader for it (v0 never Reconciles), so it would otherwise be
+  unexplained clutter in a scaffolded project.
 
 ## Commands
 

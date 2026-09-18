@@ -133,6 +133,17 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
 
 ### Changed
 
+- **`service.New`'s writer moves to the shared `go-materialize` engine**
+  (CW-20260918-0036), replacing a direct `os.MkdirAll`/`os.WriteFile` loop
+  with atomic staged writes and symlink-parent rejection at the target's
+  ancestor chain — neither existed before. A path-traversal gap found
+  during the crosswalk that produced this change is fixed at its source
+  too: `internal/render.renderPath` now rejects a rendered path segment
+  that is exactly `".."` (previously it only rejected a segment containing
+  a path separator), so an unvalidated preset input used in a directory
+  segment can no longer resolve outside the target directory — see
+  `TestRenderTree_RejectsPathSegmentTraversal`. No change to what gets
+  rendered or to `.folio.yaml`'s shape or digests.
 - `service.findUserPreset` takes a `*compose.Constraint` parameter. `nil`
   picks the semver-highest version overall (replacing the v0.1 lexicographic
   shortcut); a non-nil constraint filters and surfaces a typed

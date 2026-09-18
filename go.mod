@@ -1,9 +1,10 @@
 module github.com/hollis-labs/folio
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/charmbracelet/huh v1.0.0
+	github.com/hollis-labs/go-materialize v0.0.0-20260918203624-4190b433a343
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.9
 	golang.org/x/mod v0.36.0

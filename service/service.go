@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,6 +18,8 @@ import (
 	"github.com/hollis-labs/folio/internal/manifest"
 	"github.com/hollis-labs/folio/internal/preset"
 	"github.com/hollis-labs/folio/internal/render"
+	"github.com/hollis-labs/go-materialize/artifact"
+	"github.com/hollis-labs/go-materialize/materialize"
 )
 
 // Options configure a Service. Both BundledFS and UserDir are optional —
@@ -78,6 +81,13 @@ func New(opts Options) *Service {
 		folioVersion: ver,
 		now:          nowFn,
 	}
+}
+
+// engine returns the shared materialization engine used to write a rendered
+// tree to disk. Stateless besides s.now, so constructing one per call is
+// cheap and keeps Service itself free of engine lifecycle concerns.
+func (s *Service) engine() materialize.Engine {
+	return materialize.NewEngine(materialize.EngineOptions{Now: s.now})
 }
 
 // NewOptions parameterises a Service.New (project generation) call.
@@ -185,31 +195,32 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 		}
 	}
 
-	if err := ensureTargetReady(opts.TargetDir); err != nil {
-		return NewResult{}, err
-	}
-	if err := os.MkdirAll(opts.TargetDir, 0o755); err != nil {
-		return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", opts.TargetDir), err)
+	// The engine's Apply creates the target itself (atomically, via a staged
+	// rename) but not arbitrarily deep missing ancestors, so ensure the
+	// target's parent chain exists the way the old direct-write loop did as
+	// a side effect of its own per-file os.MkdirAll calls.
+	if err := os.MkdirAll(filepath.Dir(opts.TargetDir), 0o755); err != nil {
+		return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", filepath.Dir(opts.TargetDir)), err)
 	}
 
 	var files []FileResult
 	manifestFiles := map[string]manifest.FileRecord{}
+	entries := make([]artifact.Entry, 0, len(orderedPaths))
 	for _, rp := range orderedPaths {
 		rf := rendered[rp]
 		f := rf.File
-		dst := filepath.Join(opts.TargetDir, filepath.FromSlash(f.RelPath))
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", filepath.Dir(dst)), err)
-		}
 		var bytesOnDisk []byte
 		if f.IsBinary {
 			bytesOnDisk = f.Content
 		} else {
 			bytesOnDisk = manifest.NormalizeLineEndings(f.Content)
 		}
-		if err := os.WriteFile(dst, bytesOnDisk, modeFor(f)); err != nil {
-			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("write %s", dst), err)
-		}
+		entries = append(entries, artifact.Entry{
+			Path:  f.RelPath,
+			Kind:  artifact.EntryFile,
+			Mode:  modeFor(f),
+			Bytes: bytesOnDisk,
+		})
 		digest := manifest.Digest(f.Content)
 		files = append(files, FileResult{
 			Path:       f.RelPath,
@@ -221,6 +232,42 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 			Preset:      rf.PresetID,
 			DigestAtGen: digest,
 		}
+	}
+
+	if len(entries) == 0 {
+		// materialize.Request refuses an empty artifact tree, but a preset
+		// producing zero files (every template gated off) is legal here —
+		// v0 has always accepted it, writing just an empty target dir plus
+		// .folio.yaml. Preserve that rather than teaching the shared engine
+		// a zero-entry special case it has no other caller for.
+		if err := ensureTargetReady(opts.TargetDir); err != nil {
+			return NewResult{}, err
+		}
+		if err := os.MkdirAll(opts.TargetDir, 0o755); err != nil {
+			return NewResult{}, newErr(ErrWriteFailed, fmt.Sprintf("mkdir %s", opts.TargetDir), err)
+		}
+	} else {
+		req := materialize.Request{
+			Operation:      materialize.OperationCreate,
+			TargetRoot:     opts.TargetDir,
+			ExistingTarget: materialize.ExistingTargetAllowEmpty,
+			Artifacts:      artifact.Tree{Entries: entries},
+		}
+		if _, err := s.engine().Apply(context.Background(), req); err != nil {
+			if errors.Is(err, materialize.ErrTargetExists) {
+				return NewResult{}, newErr(ErrTargetExists, fmt.Sprintf("target dir %s already exists and is not empty", opts.TargetDir), err)
+			}
+			return NewResult{}, newErr(ErrWriteFailed, "materialize tree", err)
+		}
+		// The engine's own bookkeeping manifest has no reader in folio today
+		// — v0 always does a fresh Create, never Reconcile/Refresh — so it's
+		// pure clutter in a scaffolded project. .folio.yaml is folio's own
+		// source of truth; remove the engine's alongside it rather than
+		// leaving an unexplained dotfile for users to find.
+		if err := os.Remove(materialize.ManifestPath(opts.TargetDir)); err != nil && !os.IsNotExist(err) {
+			return NewResult{}, newErr(ErrWriteFailed, "remove materialize bookkeeping manifest", err)
+		}
+		_ = os.Remove(filepath.Dir(materialize.ManifestPath(opts.TargetDir)))
 	}
 
 	presetRefs := make([]manifest.PresetRef, 0, len(layers))

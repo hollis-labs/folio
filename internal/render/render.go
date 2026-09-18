@@ -276,6 +276,9 @@ func renderPath(rel string, ctx Context) (string, error) {
 		if strings.ContainsAny(out, "/\\") {
 			return "", fmt.Errorf("path segment %q rendered to contain a path separator: %q", seg, out)
 		}
+		if out == "." || out == ".." {
+			return "", fmt.Errorf("path segment %q rendered to the reserved traversal name %q", seg, out)
+		}
 		parts[i] = out
 	}
 	return strings.Join(parts, "/"), nil

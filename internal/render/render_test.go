@@ -77,6 +77,41 @@ func TestRenderTree_Basics(t *testing.T) {
 	}
 }
 
+// TestRenderTree_RejectsPathSegmentTraversal guards a gap found while
+// crosswalking folio's writer against agentkit's materialize engine
+// (CW-20260918-0036): renderPath only rejected a rendered segment
+// containing "/" or "\\", not one that rendered to exactly "..". A preset
+// piping an unvalidated input straight into a path segment (a directory
+// name, not the final filename) could produce a RelPath resolving outside
+// the target directory. materialize.Engine's own ValidateRelPath now
+// catches this too downstream, but the check belongs here as well: at the
+// point the path is actually constructed, independent of which preset
+// input schemas do or don't constrain their values.
+func TestRenderTree_RejectsPathSegmentTraversal(t *testing.T) {
+	src, err := filepath.Abs(filepath.Join("testdata", "preset", "files"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// testdata/preset/files/cmd/{{.inputs.project_name}}/main.go.tmpl puts
+	// project_name in a directory segment. The preset schema that would
+	// normally constrain this value lives one layer up, in internal/preset
+	// — RenderTree itself never sees it, so this reaches renderPath exactly
+	// as an unvalidated input would.
+	ctx := treeContext()
+	ctx.Inputs["project_name"] = ".."
+	_, err = render.RenderTree(render.TreeOptions{
+		Source:         render.DirFSAt(src),
+		TemplateSuffix: ".tmpl",
+		Ignore:         []string{"*.example"},
+	}, ctx)
+	if err == nil {
+		t.Fatal("expected RenderTree to reject a path segment that renders to \"..\"")
+	}
+	if !strings.Contains(err.Error(), "..") {
+		t.Errorf("error should name the offending segment, got: %v", err)
+	}
+}
+
 func TestRenderTree_Sorted(t *testing.T) {
 	src, _ := filepath.Abs(filepath.Join("testdata", "preset", "files"))
 	res, err := render.RenderTree(render.TreeOptions{
