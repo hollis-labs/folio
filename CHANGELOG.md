@@ -14,6 +14,47 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
 
 ### Added
 
+- **`go-baseline` layer preset (0.1.0) and `go-lib` 0.3.0 composed on it.**
+  `go-baseline` renders what every Go module should start with — `check.yml`,
+  `.gitignore` (now ignoring `go.work` / `go.work.sum`), `.golangci.yml`,
+  `lefthook.yml`, `LICENSE`, a `## Unreleased` `CHANGELOG.md`, `AGENTS.md` and a
+  one-line `CLAUDE.md` — and holds the shared optional inputs once
+  (`go_version`, `go_toolchain`, `copyright_holder`, `go_packages`, the
+  `agents_*` bodies). It is a layer: compose it, do not render it directly.
+  `go-lib` keeps only what is library-specific (`go.mod`, the package, an
+  `ExampleHello`, `examples/hello`, README, `release.yml`) and redeclares its
+  required inputs, because the CLI prompts only for the root preset's inputs.
+  `github_owner` is now pinned to `hollis-labs` so the module path cannot be a
+  typo away from the wrong org. New `go-lib` inputs: `stability`
+  (`pre-1.0|stable`, shapes the README `## Compatibility` paragraph) and
+  `package_layout` (`subdir|root`; the preset previously claimed a module-root
+  package while rendering a `<package>/` directory).
+- **A `go-lib` render is green in CI by construction.** The previous `check.yml`
+  pinned golangci-lint v2.1.6 — built with go1.24, so it refuses any `go 1.26.x`
+  module — used `go-version: stable`, `govulncheck@latest`, and never ran
+  `go mod verify` / `tidy -diff`. The new workflow reads the Go pin from
+  `go.mod` (`setup-go@v6`), pins golangci-lint v2.11.4 and govulncheck v1.8.0,
+  verifies modules, and fails when `go list ./...` finds no packages. `go-lib`
+  also renders a `release.yml` that refuses a tag with no CHANGELOG heading and
+  publishes the section as the GitHub Release notes. The new workflows have not
+  yet run in GitHub Actions; the first lib built from this preset is their
+  proof.
+- **`scripts/check-lib-conformance.sh <dir> [--release] [--report]`** reports a
+  tree against the lib checklist (B1-B8, B10, B15-B18, C4, F1-F4; `--release` adds
+  unresolved `TODO(author)` and a CHANGELOG heading per tag on HEAD). Exit 0 all
+  pass, 1 any fail, 2 nothing examined, 3 a tool is missing; `--report` never
+  exits 1. It is a bridge, not a permanent part of folio: remove it when the
+  checklist is promoted and folio owns the conformance definition, or `folio`
+  grows a conformance command.
+- **`go-lib` integration tests that run the tools.** `gofmt`, `go build`,
+  `go vet`, `go test -race`, `go mod verify`, `go mod tidy -diff` and
+  `golangci-lint` (at the version parsed from the rendered `check.yml`, asserting
+  it was built with a Go at least as new as the module's) run on a fresh render
+  of each `package_layout` / `stability` / `go_toolchain` variant; `FOLIO_NET=1`
+  adds govulncheck. A missing tool is a visible skip, and a failure under
+  `FOLIO_REQUIRE_TOOLS=1`. Every conformance item has a positive control: a
+  mutation of the tree that must turn exactly that item FAIL.
+
 - **Shared portfolio hook configs are now folio's to own.** `lefthook.yml`
   and `.golangci.yml` ship from the `base`, `go-lib`, `nanite-plugin` and
   `sysop-ui` presets, replacing per-repo copies whose headers pointed at a
@@ -101,7 +142,7 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
   library-first stub. Exercises both the additive and overwrite directions
   of composition.
 - **`go-lib` bundled preset.** `folio new go-lib <dir>` scaffolds an
-  importable Go shared library — a package at the module root (no `cmd/`,
+  importable Go shared library — one package (no `cmd/`,
   no `internal/`, no Makefile), plus `CHANGELOG.md`, MIT `LICENSE`, an
   `examples/` placeholder, and a `check.yml` CI workflow (gofmt, vet,
   golangci-lint, `test -race`, govulncheck). Reproduces the hand-built
@@ -132,6 +173,14 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
   reach the right layer.
 
 ### Changed
+
+- **`go_version` defaults to `1.26.6` in every bundled preset** (`base` was
+  `1.23`; `go-lib`, `nanite-plugin`, `sysop-ui` were `1.26.1`). govulncheck
+  judges the standard library by go.mod's `go` line, so a lower floor reports
+  advisories fixed in go1.26.4-1.26.6 on a lib that touches `net/http`. The
+  `sysop-ui` README now renders the input instead of a hard-coded "Go 1.26.1+".
+  Optional `go_toolchain` (default none) renders a `toolchain` directive as an
+  escape hatch for a later advisory.
 
 - **`service.New`'s writer moves to the shared `go-materialize` engine**
   (CW-20260918-0036), replacing a direct `os.MkdirAll`/`os.WriteFile` loop
@@ -226,6 +275,12 @@ order. The generated tree passes `go vet`, `go build`, `go test` clean.
 
 ### Out of scope (still deferred)
 
+- `base`, `nanite-plugin` and `sysop-ui` composing `go-baseline`; until then their
+  `.golangci.yml` / `lefthook.yml` copies are still synced by hand.
+- `go-app`, which composes `go-baseline` once the service-layer standard is ratified.
+- Folio's own `.github/workflows/ci.yml` still uses `go-version: '1.25'`,
+  `golangci-lint version: latest` and `govulncheck@latest`, and does not set
+  `FOLIO_REQUIRE_TOOLS=1`.
 - `folio sync` + diff UI.
 - Federated git-URL preset sources (`source: git`).
 - Multi-version bundled presets (`presets/<id>@<version>/`).

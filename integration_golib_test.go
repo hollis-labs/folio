@@ -12,10 +12,12 @@ import (
 	"github.com/hollis-labs/folio/service"
 )
 
-// TestIntegration_GoLibPreset exercises the go-lib preset — a standalone
-// (non-composed) importable shared-library scaffold. The result must be a
-// module-root package with no internal/, no cmd/, and no Makefile, and the
-// generated tree must vet clean.
+// TestIntegration_GoLibPreset exercises the go-lib preset — an importable
+// shared-library scaffold composed on go-baseline. The result must be one
+// package in a <package_name>/ directory (the default package_layout) with no
+// internal/, no cmd/, and no Makefile, and the generated tree must vet clean.
+// The deeper gates (gofmt, lint, race tests, conformance) live in
+// integration_golib_conformance_test.go.
 func TestIntegration_GoLibPreset(t *testing.T) {
 	target := filepath.Join(t.TempDir(), "go-smoke-lib")
 
@@ -43,13 +45,19 @@ func TestIntegration_GoLibPreset(t *testing.T) {
 	want := []string{
 		".folio.yaml",
 		".github/workflows/check.yml",
+		".github/workflows/release.yml",
 		".gitignore",
+		".golangci.yml",
+		"AGENTS.md",
 		"CHANGELOG.md",
+		"CLAUDE.md",
 		"LICENSE",
 		"README.md",
-		"examples/README.md",
+		"examples/hello/main.go",
 		"go.mod",
+		"lefthook.yml",
 		"smoke/doc.go",
+		"smoke/example_test.go",
 		"smoke/smoke.go",
 		"smoke/smoke_test.go",
 	}
@@ -59,8 +67,8 @@ func TestIntegration_GoLibPreset(t *testing.T) {
 		}
 	}
 
-	// go-lib is an importable shared-library layout: the package sits at the
-	// module root. internal/ would make it un-importable; cmd/ and Makefile
+	// go-lib is an importable shared-library layout: the package is importable
+	// by other modules. internal/ would make it un-importable; cmd/ and Makefile
 	// belong to the binary-oriented base/go-package presets, not here.
 	for _, p := range []string{"internal", "cmd", "Makefile"} {
 		if _, statErr := os.Stat(filepath.Join(target, p)); statErr == nil {
@@ -75,7 +83,7 @@ func TestIntegration_GoLibPreset(t *testing.T) {
 	if !strings.Contains(string(gomod), "module github.com/hollis-labs/go-smoke-lib") {
 		t.Errorf("go.mod missing expected module declaration:\n%s", gomod)
 	}
-	if !strings.Contains(string(gomod), "go 1.26.1") {
+	if !strings.Contains(string(gomod), "go 1.26.6") {
 		t.Errorf("go.mod missing default go directive:\n%s", gomod)
 	}
 

@@ -88,6 +88,9 @@ func TestIntegration_NanitePluginPreset_MinimalCore(t *testing.T) {
 	if !strings.Contains(string(gomod), "module github.com/hollis-labs/nanite-plugin-minimal") {
 		t.Errorf("go.mod missing module declaration:\n%s", gomod)
 	}
+	if !strings.Contains(string(gomod), "\ngo 1.26.6\n") {
+		t.Errorf("go.mod missing default go directive 1.26.6:\n%s", gomod)
+	}
 	if !strings.Contains(string(gomod), "github.com/hollis-labs/plugin-sdk v0.3.0") {
 		t.Errorf("go.mod missing default SDK pin:\n%s", gomod)
 	}

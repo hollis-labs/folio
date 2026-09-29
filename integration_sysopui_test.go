@@ -78,6 +78,9 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 	if !strings.Contains(gomod, "module github.com/hollis-labs/acme_sysop") {
 		t.Errorf("go.mod missing module declaration:\n%s", gomod)
 	}
+	if !strings.Contains(gomod, "\ngo 1.26.6\n") {
+		t.Errorf("go.mod missing default go directive 1.26.6:\n%s", gomod)
+	}
 	if !strings.Contains(gomod, "require github.com/hollis-labs/go-webui v0.1.0") {
 		t.Errorf("go.mod missing go-webui dependency:\n%s", gomod)
 	}

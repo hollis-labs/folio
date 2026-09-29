@@ -1,16 +1,35 @@
 folio_version: "0.1"
 id: go-lib
-version: 0.2.0
-description: Importable Go shared library — module-root package, no cmd/ or internal/
+version: 0.3.0
+description: Importable Go shared library — one package (subdirectory or module root), no cmd/ or internal/, composed on go-baseline
 author: hollis-labs
 license: MIT
 
-# Standalone, NOT composed on `base`. The `base` preset is binary-oriented
-# (it scaffolds cmd/<project>/main.go + a build Makefile) and its
-# project_name input forbids hyphens, so it cannot express a `go-*` repo
-# name. A shared library is a distinct atom: an importable package at the
-# module root, no cmd/, no internal/, no Makefile — matching the
-# hand-built libs/go-providers and libs/go-agent-launch layout.
+# Composes `go-baseline` (CI, lint config, hooks, LICENSE, CHANGELOG, AGENTS.md)
+# and adds what is specific to an importable library: go.mod, the package, a
+# runnable example, README and the release workflow. NOT composed on `base`:
+# that preset is binary-oriented (cmd/<project>/main.go + a build Makefile) and
+# its project_name input forbids hyphens, so it cannot express a `go-*` name.
+# A shared library is a distinct atom: an importable package, no cmd/, no
+# internal/, no Makefile.
+#
+# The CLI prompts only for THIS preset's inputs, so the required ones are
+# redeclared here; optional shared inputs (go_version, description, ...) are
+# declared once in go-baseline and flow through.
+
+composes:
+  - id: go-baseline
+    version: ">=0.1,<1.0"
+    source: local
+    path: ../go-baseline
+    vars:
+      agents_start_here: |-
+        - `{{ .inputs.package_name }}` package — the importable API; its `doc.go` is the package documentation.
+        - `examples/hello/main.go` — the runnable example; the README `## Usage` fence must stay identical to it.
+        - `.github/workflows/check.yml` — the full CI gate; `release.yml` refuses a tag with no CHANGELOG heading.
+      agents_boundaries: |-
+        - No `replace` directive in `go.mod` and no committed `go.work`: consumers cannot resolve either.
+        - TODO(author): what a competent agent will get wrong here — invariants, the test that guards each by name, what must never happen.
 
 inputs:
   - name: repo_name
@@ -23,33 +42,23 @@ inputs:
     required: true
     pattern: "^[a-z][a-z0-9]*$"
     description: Go package identifier (lowercase, no separators, e.g. paths)
-  - name: github_owner
-    type: string
-    default: hollis-labs
-    description: GitHub username or org
-  - name: description
-    type: string
-    default: ""
-    description: One-line library description
-  - name: go_version
-    type: string
-    default: "1.26.1"
-    description: Go toolchain version for the go.mod go directive
-  - name: copyright_holder
-    type: string
-    default: Hollis Labs
-    description: Copyright holder named in the LICENSE file
-  - name: go_packages
-    type: string
-    default: "./..."
+  - name: stability
+    type: enum
+    values: [pre-1.0, stable]
+    default: pre-1.0
+    description: Shapes the README `## Compatibility` paragraph (pre-1.0 = minor releases may break; stable = v1 promise)
+  - name: package_layout
+    type: enum
+    values: [subdir, root]
+    default: subdir
     description: >-
-      Package pattern the lefthook go-vet and go-test hooks run against.
-      Override for repos where `./...` pulls in trees that should not gate a
-      commit.
+      subdir = the package lives in <package_name>/ (import path
+      <module>/<package_name>); root = the package sits at the module root
+      (import path is the module path, package name is still package_name).
 
 computed:
-  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.repo_name }}"
-  year: "{{ .now.Year }}"
+  import_path: '{{ if eq .inputs.package_layout "root" }}{{ .computed.module_path }}{{ else }}{{ .computed.module_path }}/{{ .inputs.package_name }}{{ end }}'
+  import_line: '{{ if eq .inputs.package_layout "root" }}{{ .inputs.package_name }} "{{ .computed.module_path }}"{{ else }}"{{ .computed.module_path }}/{{ .inputs.package_name }}"{{ end }}'
 
 files:
   source: ./files
@@ -58,10 +67,5 @@ files:
 sync:
   default: prompt
   rules:
-    # Shared portfolio configs: folio is the canonical copy, so a re-render
-    # replaces them. A project needing a local deviation should get it added
-    # here as an input rather than editing the rendered file.
-    - glob: "lefthook.yml"
-      policy: overwrite
-    - glob: ".golangci.yml"
+    - glob: ".github/workflows/release.yml"
       policy: overwrite

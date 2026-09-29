@@ -65,6 +65,14 @@ func TestIntegration_ComposingGoPackagePreset(t *testing.T) {
 	}
 
 	// README is go-package's overlay (mentions "Layout" + library package).
+	gomod, err := os.ReadFile(filepath.Join(target, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(gomod), "\ngo 1.26.6\n") {
+		t.Errorf("go.mod missing default go directive 1.26.6:\n%s", gomod)
+	}
+
 	readme, err := os.ReadFile(filepath.Join(target, "README.md"))
 	if err != nil {
 		t.Fatal(err)
