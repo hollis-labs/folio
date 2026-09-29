@@ -174,6 +174,10 @@ and publishes the generated tree to GitHub via the user's `gh` CLI.
 
 ### Changed
 
+- **Folio's own `go.mod` is `go 1.26.6`, and its CI reads the Go version from it**
+  (`go-version-file: go.mod` in all three jobs, replacing `'1.25'`). govulncheck
+  judges the stdlib by that line; at `go 1.26.1` it reported reachable stdlib
+  advisories through `service.Service.New`.
 - **`go_version` defaults to `1.26.6` in every bundled preset** (`base` was
   `1.23`; `go-lib`, `nanite-plugin`, `sysop-ui` were `1.26.1`). govulncheck
   judges the standard library by go.mod's `go` line, so a lower floor reports
@@ -278,8 +282,8 @@ order. The generated tree passes `go vet`, `go build`, `go test` clean.
 - `base`, `nanite-plugin` and `sysop-ui` composing `go-baseline`; until then their
   `.golangci.yml` / `lefthook.yml` copies are still synced by hand.
 - `go-app`, which composes `go-baseline` once the service-layer standard is ratified.
-- Folio's own `.github/workflows/ci.yml` still uses `go-version: '1.25'`,
-  `golangci-lint version: latest` and `govulncheck@latest`, and does not set
+- Folio's own `.github/workflows/ci.yml` still uses `golangci-lint version: latest`
+  and `govulncheck@latest` (its Go pin now comes from `go.mod`), and does not set
   `FOLIO_REQUIRE_TOOLS=1`.
 - `folio sync` + diff UI.
 - Federated git-URL preset sources (`source: git`).
