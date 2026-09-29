@@ -2,10 +2,13 @@ package folio_test
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -237,6 +240,50 @@ func scriptResult(t *testing.T, dir string, extra ...string) (map[string]string,
 		}
 	}
 	return items, code
+}
+
+// treeSnapshot maps every file under dir to its content hash, so two snapshots
+// differ if anything was added, removed or changed.
+func treeSnapshot(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	snap := map[string]string{}
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, path)
+		snap[rel] = fmt.Sprintf("%x", sha256.Sum256(b))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return snap
+}
+
+// The script reports on a tree; it must never change it. A stray `hello`
+// binary from a bare `go build ./examples/...` once appeared in the examined
+// tree and, in a real lib, would be committable.
+func TestConformanceScript_LeavesTreeUnchanged(t *testing.T) {
+	needTool(t, "go")
+	dir := renderGoLib(t, nil)
+	before := treeSnapshot(t, dir)
+	if _, code := scriptResult(t, dir, "--report"); code != 0 {
+		t.Fatalf("script exit %d on a fresh render", code)
+	}
+	if after := treeSnapshot(t, dir); !reflect.DeepEqual(before, after) {
+		t.Errorf("the conformance script modified the examined tree:\nbefore: %v\nafter:  %v", before, after)
+	}
+
+	// Control: prove the snapshot notices the defect it guards against.
+	mustRun(t, dir, "go", "build", "./examples/...")
+	if reflect.DeepEqual(before, treeSnapshot(t, dir)) {
+		t.Error("control failed: a bare go build of examples/ left the snapshot unchanged")
+	}
 }
 
 func TestConformanceScript_PositiveControls(t *testing.T) {

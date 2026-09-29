@@ -104,7 +104,9 @@ if [ "$floor_ok" = 1 ]; then res PASS B5 "go directive $gover is at or above the
 
 # --- B6-B8 gates -----------------------------------------------------------
 run_item B6 "gofmt -l . is empty" sh -c 'out=$(gofmt -l .); [ -z "$out" ] || { echo "$out"; exit 1; }'
-run_item B7 "go build ./... and go vet ./..." sh -c 'go build ./... && go vet ./...'
+# -o /dev/null: a lone `main` package would otherwise leave a binary in the tree
+# being examined. This script never writes into it.
+run_item B7 "go build ./... and go vet ./..." sh -c 'go build -o /dev/null ./... && go vet ./...'
 run_item B8 "go test -count=1 ./..." go test -count=1 ./...
 
 # --- B10 golangci config ---------------------------------------------------
@@ -114,7 +116,7 @@ if [ -f .golangci.yml ] || [ -f .golangci.yaml ]; then res PASS B10 ".golangci c
 if [ -f README.md ]; then
 	if $GREP -Fq "go get $modpath" README.md; then res PASS B15 "README has 'go get $modpath'"; else res FAIL B15 "README lacks 'go get $modpath'"; fi
 	if $GREP -q '^```go' README.md; then
-		if [ -d examples ] && ! go build ./examples/... >"$tmp" 2>&1; then
+		if [ -d examples ] && ! go build -o /dev/null ./examples/... >"$tmp" 2>&1; then
 			res FAIL B16 "examples/ does not build"; detail
 		else
 			res PASS B16 "README has a go fence; examples/ builds"
