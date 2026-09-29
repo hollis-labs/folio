@@ -4,7 +4,7 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] — Unreleased
+## [0.2.0] — 2026-09-29
 
 Composition slice. `composes:` becomes a working layered render driving a
 real semver constraint resolver, with the first bundled composing preset
