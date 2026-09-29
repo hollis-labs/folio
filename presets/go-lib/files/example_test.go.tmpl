@@ -1,0 +1,14 @@
+{{ if eq .inputs.package_layout "root" -}}
+package {{ .inputs.package_name }}_test
+
+import (
+	"fmt"
+
+	{{ .computed.import_line }}
+)
+
+func ExampleHello() {
+	fmt.Println({{ .inputs.package_name }}.Hello())
+	// Output: hello from {{ .inputs.package_name }}
+}
+{{ end -}}

@@ -1,0 +1,23 @@
+# {{ .inputs.repo_name }}
+
+{{ if .inputs.description }}{{ .inputs.description }}{{ else }}A hollis-labs Go module.{{ end }}
+
+It is not: TODO(author) — the mistake this repo attracts.
+
+## Start Here
+
+{{ .inputs.agents_start_here }}
+
+## Commands
+
+```sh
+gofmt -l .
+go vet {{ .inputs.go_packages }}
+go test -race -count=1 {{ .inputs.go_packages }}
+```
+
+CI (`.github/workflows/check.yml`) is the full gate.
+
+## Boundaries
+
+{{ .inputs.agents_boundaries }}

@@ -1,0 +1,93 @@
+folio_version: "0.1"
+id: go-baseline
+version: 0.1.0
+description: Shared Go baseline layer (CI, lint, hooks, LICENSE, CHANGELOG, AGENTS.md) — compose, do not render directly
+author: hollis-labs
+license: MIT
+
+# A LAYER, not a project. It renders no go.mod and no Go source: the composing
+# preset (today `go-lib`) owns those and must redeclare the inputs it requires
+# (`repo_name`, and its own) because the CLI prompts only for the ROOT preset's
+# declared inputs. Optional inputs with defaults live here once; earlier
+# layers' resolved inputs flow to later layers, so the composing preset's
+# templates can read `.inputs.go_version` etc. without redeclaring them.
+#
+# Renders no telemetry: that is an application concern.
+
+inputs:
+  - name: repo_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Repository / Go module name (lowercase, hyphens allowed, e.g. go-apppaths)
+  - name: github_owner
+    type: string
+    default: hollis-labs
+    pattern: "^hollis-labs$"
+    description: >-
+      GitHub org. Fixed to hollis-labs: the module path is
+      github.com/<owner>/<repo_name> and a wrong-org path is a typo away.
+  - name: description
+    type: string
+    default: ""
+    description: One-line description
+  - name: go_version
+    type: string
+    default: "1.26.6"
+    pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    description: >-
+      The go.mod `go` directive — the portfolio floor (1.26.6). Renders into
+      go.mod and golangci-lint's `go:` key, and CI reads it back through
+      `go-version-file: go.mod`, so there is one pin. govulncheck judges the
+      stdlib by this line: a lower floor reports advisories fixed in 1.26.4-6.
+  - name: go_toolchain
+    type: string
+    default: ""
+    pattern: "^([0-9]+\\.[0-9]+\\.[0-9]+)?$"
+    description: >-
+      Optional go.mod `toolchain` directive (e.g. 1.26.8), empty = none. Escape
+      hatch for a new stdlib advisory fixed above go_version: it raises this
+      repo's build/scan level without raising every consumer's floor. Must be
+      >= go_version.
+  - name: copyright_holder
+    type: string
+    default: Hollis Labs
+    description: Copyright holder named in the LICENSE file
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks and the AGENTS.md
+      Commands section run against. Override for repos where `./...` pulls in
+      trees that should not gate a commit.
+  - name: agents_start_here
+    type: string
+    multiline: true
+    default: "- TODO(author): `<path>` — the file that owns <decision>"
+    description: Body of AGENTS.md `## Start Here` (markdown list of the files that own decisions)
+  - name: agents_boundaries
+    type: string
+    multiline: true
+    default: "TODO(author): what a competent agent will get wrong here — invariants, the test that guards each by name, what must never happen."
+    description: Body of AGENTS.md `## Boundaries`
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.repo_name }}"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    # Shared portfolio configs: folio is the canonical copy, so a re-render
+    # replaces them. A project needing a local deviation should get it added
+    # here as an input rather than editing the rendered file.
+    - glob: "lefthook.yml"
+      policy: overwrite
+    - glob: ".golangci.yml"
+      policy: overwrite
+    - glob: ".github/workflows/check.yml"
+      policy: overwrite

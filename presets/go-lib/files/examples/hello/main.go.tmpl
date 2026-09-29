@@ -1,0 +1,9 @@
+package main
+
+import (
+	"fmt"
+
+	{{ .computed.import_line }}
+)
+
+func main() { fmt.Println({{ .inputs.package_name }}.Hello()) }

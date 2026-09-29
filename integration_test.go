@@ -64,6 +64,9 @@ func TestIntegration_BundledBasePreset(t *testing.T) {
 	if !strings.Contains(string(gomod), "module github.com/chrispian/smoke_test") {
 		t.Errorf("go.mod missing expected module declaration:\n%s", gomod)
 	}
+	if !strings.Contains(string(gomod), "\ngo 1.26.6\n") {
+		t.Errorf("go.mod missing default go directive 1.26.6:\n%s", gomod)
+	}
 
 	mainGo, err := os.ReadFile(filepath.Join(target, "cmd", "smoke_test", "main.go"))
 	if err != nil {
