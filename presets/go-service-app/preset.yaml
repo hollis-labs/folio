@@ -1,7 +1,7 @@
 folio_version: "0.1"
 id: go-service-app
-version: 0.1.0
-description: New Go service app with a transport-boundary lint gate — composed on go-baseline, adds a second forbidigo config, its doc and a ratchet ceiling
+version: 0.2.0
+description: New Go service app — composition root wiring go-apppaths and go-otel, a service-layer skeleton and a transport-boundary lint gate; composed on go-baseline
 author: hollis-labs
 license: MIT
 
@@ -20,6 +20,16 @@ license: MIT
 # files go-baseline deliberately does not render (go.mod, one Go package —
 # check.yml fails on "no packages"), which this preset owns, as go-lib does.
 #
+# The composition root is real, not a stub: `cmd/<repo_name>/main.go` resolves
+# paths with go-apppaths (`paths.Resolve`), gates telemetry with go-otel
+# (`EnabledFromEnv` / `InitOrWarn`; go-baseline renders none, that is an
+# application concern and lands here), opens a placeholder store and builds
+# `internal/service` (unexported store, `Store()` escape hatch, `New(store)`:
+# Torque's shape). The placeholder store renders at a fixed `internal/store`
+# (folio refuses a path separator in a templated file name), so `store_pkg_path`
+# only steers the doc and the commented depguard rule. Both libraries are called, not reimplemented. go.sum is not
+# rendered: run `go mod tidy` once after generating.
+#
 # `go-baseline`'s own `.golangci.yml` is untouched: the transport config is a
 # SECOND file, run with `--config .golangci.transport.yml`.
 #
@@ -35,7 +45,9 @@ composes:
     vars:
       agents_start_here: |-
         - `.golangci.transport.yml` — the transport-boundary gate; `docs/transport-boundary.md` says how to run and ratchet it.
-        - `cmd/{{ .inputs.repo_name }}/main.go` — the composition root: the only place that opens the store.
+        - `cmd/{{ .inputs.repo_name }}/main.go` — the composition root: resolves paths (go-apppaths), gates telemetry (go-otel), opens the store and builds the service layer; the only place that opens the store.
+        - `internal/service/service.go` — the service layer: unexported store, `Store()` escape hatch, `New(store)`.
+        - Run `go mod tidy` once after generating: `go.sum` is not rendered.
         - `.github/workflows/check.yml` — the full CI gate.
       agents_boundaries: |-
         - Transports (the packages matched by `transport_dirs_regex` in `.golangci.transport.yml`) call the service layer, never `{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}` methods or raw SQL; the gate is `.golangci.transport.yml`, its ceiling `.github/quality/transport-baseline.txt` only decreases.
@@ -74,6 +86,37 @@ inputs:
     description: >-
       Module-relative import path of the store package. Used only by the
       commented-out depguard Rule B (import ban) and the doc.
+
+  - name: app_name
+    type: string
+    default: ""
+    pattern: "^([a-z][a-z0-9-]*)?$"
+    description: >-
+      The go-apppaths identity: names the XDG directories and prefixes the
+      <APP>_DB_PATH / <APP>_WORKSPACE variables paths.Resolve reads. Empty =
+      repo_name.
+  - name: otel_env_var
+    type: string
+    default: ""
+    pattern: "^([A-Z][A-Z0-9_]*)?$"
+    description: >-
+      The app-specific variable that turns telemetry on (opt-in;
+      HOLLIS_OTEL_ENABLED, portfolio-wide, wins over it). Empty =
+      <APP>_OTEL_ENABLED derived from app_name.
+  - name: legacy_names
+    type: string
+    default: ""
+    pattern: "^([a-z][a-z0-9-]*(,[a-z][a-z0-9-]*)*)?$"
+    description: >-
+      Comma-separated earlier names of this app; renders
+      paths.WithLegacyNames(...) so their data directories are adopted on first
+      run. Empty = none (a new app has no legacy).
+
+computed:
+  app: '{{ default .inputs.repo_name .inputs.app_name }}'
+  env_prefix: '{{ upper (replace "-" "_" (default .inputs.repo_name .inputs.app_name)) }}'
+  otel_var: '{{ default (printf "%s_OTEL_ENABLED" (upper (replace "-" "_" (default .inputs.repo_name .inputs.app_name)))) .inputs.otel_env_var }}'
+  legacy_args: '{{ if .inputs.legacy_names }}{{ range $i, $n := split "," .inputs.legacy_names }}{{ if $i }}, {{ end }}{{ quote $n }}{{ end }}{{ end }}'
 
 files:
   source: ./files

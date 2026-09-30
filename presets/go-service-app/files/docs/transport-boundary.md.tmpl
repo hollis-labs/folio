@@ -12,6 +12,18 @@ Module `{{ .computed.module_path }}`; store handle `{{ .inputs.store_pkg_name }}
 `{{ .inputs.transport_dirs_regex }}`. The composition root (`cmd/`) may open the store and is outside
 the scope regex by construction.
 
+## The service layer and its escape hatch
+
+`internal/service` is generated with the shape Torque's reference uses (the
+portfolio's service-layer standard, `knowledge/standards/service-layer-standard`):
+`Service` holds the store in an unexported field, `New(store)` builds it, and
+`Store()` returns the raw handle. `Store()` is the one sanctioned crossing point,
+for application-service code that composes across domain services; a transport
+that calls it (or any store method) is what this gate exists to catch. The
+composition root (`cmd/{{ .inputs.repo_name }}`) opens the store and hands only the `Service` to the
+transports. The package name is a default, not a rule: the standard allows
+another (Tether uses `internal/app`).
+
 ## Run it
 
 ```sh

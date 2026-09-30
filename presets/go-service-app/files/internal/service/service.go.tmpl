@@ -1,0 +1,34 @@
+// Package service is the service layer of {{ .inputs.repo_name }}: the one place business rules
+// live, and the only thing the transports (internal/api, internal/mcp, a CLI)
+// call. See docs/transport-boundary.md.
+//
+// The package is named internal/service by default; the standard permits
+// another name (Tether calls it internal/app). Rename the directory and the
+// import in cmd/{{ .inputs.repo_name }}/main.go together.
+package service
+
+import (
+	{{ if ne "store" .inputs.store_pkg_name }}{{ .inputs.store_pkg_name }} {{ end }}"{{ .computed.module_path }}/internal/store"
+)
+
+// Service is the root of the service layer. It starts as a skeleton: add a
+// domain service per area (a struct holding the store, exposed as a field) as
+// the app grows, rather than methods on Service itself.
+type Service struct {
+	// store is the underlying store. It is not an exported field so every caller
+	// funnels through the domain services where business rules apply; Store() is
+	// the explicit escape hatch for application-service code that composes
+	// across several domain services and needs the raw handle. Transports must
+	// not use it (.golangci.transport.yml).
+	store *{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}
+}
+
+// Store returns the underlying store, for application-service code that
+// composes across domain services. It is the sanctioned crossing point, not a
+// convenience for transports.
+func (s *Service) Store() *{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }} { return s.store }
+
+// New constructs a Service wired to the provided store.
+func New(st *{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}) *Service {
+	return &Service{store: st}
+}

@@ -4,6 +4,39 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`go-service-app` 0.2.0: the composition root is real.** `cmd/<repo_name>/main.go` was a
+  `fmt.Println` stub whose comment described the service-layer pattern in prose; it now wires it.
+  It resolves paths with `paths.Resolve` (go-apppaths v0.3.0), gates telemetry with
+  `hotel.EnabledFromEnv` / `hotel.InitOrWarn` / `hotel.EnvironmentFromEnv` (go-otel v0.10.0; opt-in,
+  `HOLLIS_OTEL_ENABLED` wins), opens a placeholder store and builds the service layer. Both
+  libraries are called, not reimplemented, and neither app's hand-rolled `internal/otel` wrapper
+  is used as a template: both predate these primitives. `go.mod` now requires the two libraries
+  (`go.sum` is not rendered: run `go mod tidy` once after generating).
+  - New `internal/service/service.go`: Torque's shape, an unexported `store` field, a `Store()`
+    escape hatch and `New(store)`. A starting skeleton, not a domain-service generator. The
+    package name `internal/service` is hardcoded; the standard allows another (Tether's is
+    `internal/app`) and the file says so.
+  - New `internal/store/store.go`: a placeholder that opens nothing, with the
+    `// TODO(author)` marker where the real store is opened. It always renders at `internal/store`
+    (folio refuses a path separator in a templated file name), so `store_pkg_path` still steers
+    only the doc and the commented depguard rule.
+  - New inputs, all optional: `app_name` (the go-apppaths identity, default `repo_name`),
+    `otel_env_var` (default `<APP>_OTEL_ENABLED`) and `legacy_names` (comma-separated, renders
+    `paths.WithLegacyNames`; empty renders no option).
+  - `docs/transport-boundary.md` gains a section naming `Store()` as the sanctioned crossing
+    point and pointing at the service-layer standard.
+  - Versioned in place (0.1.0 to 0.2.0), not as a sibling preset. Existing generated projects are
+    untouched; `folio inspect` will report the new files as `added_upstream`.
+  - Tests render it, run `go mod tidy`, `go vet` and `go build` on the result, assert the store
+    field is unexported and the escape hatch and constructor are present, and prove by a
+    compile-failing external package that the field cannot be reached from outside. Needs the
+    network for `go mod tidy`; without it the build assertions skip visibly (a failure under
+    `FOLIO_REQUIRE_TOOLS=1`).
+
 ## [0.6.0] — 2026-09-30
 
 ### Added
