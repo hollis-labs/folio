@@ -1,0 +1,94 @@
+folio_version: "0.1"
+id: go-service-app
+version: 0.1.0
+description: New Go service app with a transport-boundary lint gate — composed on go-baseline, adds a second forbidigo config, its doc and a ratchet ceiling
+author: hollis-labs
+license: MIT
+
+# Composes `go-baseline` (CI, lint, hooks, LICENSE, CHANGELOG, AGENTS.md) and
+# adds what a service app with transports (HTTP/MCP/CLI adapters) needs:
+# go.mod, a cmd/<repo_name> entrypoint (the composition root — outside the
+# transport scope by construction), `.golangci.transport.yml` (the standalone
+# second config: "transports call the service layer, not the store"),
+# `docs/transport-boundary.md` and the ratchet ceiling file.
+#
+# Why go-baseline and not `base`: base renders ci.yml with a literal
+# `go-version` (the transport gate requires `go-version-file: go.mod`), a
+# Makefile and a hello-world main, and forbids nothing this preset wants; it
+# also has no CHANGELOG/AGENTS.md. go-baseline renders check.yml with
+# `go-version-file: go.mod` and golangci-lint v2.11.4. The cost is the two
+# files go-baseline deliberately does not render (go.mod, one Go package —
+# check.yml fails on "no packages"), which this preset owns, as go-lib does.
+#
+# `go-baseline`'s own `.golangci.yml` is untouched: the transport config is a
+# SECOND file, run with `--config .golangci.transport.yml`.
+#
+# The CLI prompts only for THIS preset's inputs, so the required ones are
+# redeclared here; optional shared inputs (go_version, description, ...) are
+# declared once in go-baseline and flow through.
+
+composes:
+  - id: go-baseline
+    version: ">=0.1,<1.0"
+    source: local
+    path: ../go-baseline
+    vars:
+      agents_start_here: |-
+        - `.golangci.transport.yml` — the transport-boundary gate; `docs/transport-boundary.md` says how to run and ratchet it.
+        - `cmd/{{ .inputs.repo_name }}/main.go` — the composition root: the only place that opens the store.
+        - `.github/workflows/check.yml` — the full CI gate.
+      agents_boundaries: |-
+        - Transports (the packages matched by `transport_dirs_regex` in `.golangci.transport.yml`) call the service layer, never `{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}` methods or raw SQL; the gate is `.golangci.transport.yml`, its ceiling `.github/quality/transport-baseline.txt` only decreases.
+        - TODO(author): what a competent agent will get wrong here — invariants, the test that guards each by name, what must never happen.
+
+inputs:
+  - name: repo_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Repository / Go module name (lowercase, hyphens allowed, e.g. my-service)
+  - name: store_pkg_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: >-
+      Go package NAME (not import path) of the store, e.g. store, sqlite,
+      storage, sqlstore. Rule A matches <package name>.<Type>.<Method>.
+  - name: store_type
+    type: string
+    required: true
+    pattern: "^[A-Z][A-Za-z0-9_]*$"
+    description: Exported handle type in that package whose methods transports must not call (Store, Repository).
+  - name: transport_dirs_regex
+    type: string
+    default: "^internal/(api|mcp)/"
+    pattern: "^[^'\\n]+$"
+    description: >-
+      Module-relative regex of the transport packages (matched against file
+      paths under relative-path-mode: gomod). No single quote: it is rendered
+      inside a single-quoted YAML string.
+  - name: store_pkg_path
+    type: string
+    default: "internal/store"
+    pattern: "^[a-z][a-zA-Z0-9_./-]*$"
+    description: >-
+      Module-relative import path of the store package. Used only by the
+      commented-out depguard Rule B (import ban) and the doc.
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    - glob: ".golangci.transport.yml"
+      policy: overwrite
+    - glob: "docs/transport-boundary.md"
+      policy: overwrite
+    - glob: ".github/quality/transport-baseline.txt"
+      policy: skip
+    - glob: "internal/**"
+      policy: skip
+    - glob: "cmd/**"
+      policy: skip

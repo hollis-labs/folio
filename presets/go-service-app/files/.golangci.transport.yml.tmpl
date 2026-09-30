@@ -1,0 +1,64 @@
+# .golangci.transport.yml — standalone SECOND config: transports call the
+# service layer, not the store. Run from the module root:
+#
+#   GOWORK=off golangci-lint run --config .golangci.transport.yml ./...
+#
+# It is deliberately not merged into .golangci.yml: forbidigo has no per-path
+# setting, so this file scopes its rules by exclusion, and a ratchet keyed by
+# linter name cannot tell two forbidigo rules apart. See
+# docs/transport-boundary.md (limits, ratchet, CI requirements).
+#
+# CI requirements: setup-go with `go-version-file: go.mod`, and golangci-lint
+# >= v2.11.4 (v2.1.6 was built with go1.24 and refuses go 1.26 modules).
+#
+# To adopt in an app that already has a config: copy the `forbidigo` block, the
+# two `exclusions.rules` entries and the `issues` keys into it — or keep this
+# file beside it. If the app's own config lints tests, keep the `_test\.go$`
+# exclusion below or the count inflates.
+#
+# Placeholders (folio inputs): store package NAME `{{ .inputs.store_pkg_name }}`, handle type
+# `{{ .inputs.store_type }}`, transport dirs `{{ .inputs.transport_dirs_regex }}`.
+version: "2"
+
+run:
+  tests: false
+  relative-path-mode: gomod        # REQUIRED: path-except is otherwise relative to this file's directory, and a config outside the module silently reports 0
+
+linters:
+  default: none
+  enable: [forbidigo]              # add depguard only where the import ban is affordable (see docs)
+  settings:
+    forbidigo:
+      analyze-types: true          # REQUIRED: without it the pattern sees source text only
+      forbid:
+        # Rule A: store-handle method calls. Form is <package NAME>.<Type>.<Method>,
+        # NOT the import path; a fully-qualified pattern matches nothing.
+        # Type-only use (store.Row, store.ErrX) is not flagged.
+        - pattern: '^{{ .inputs.store_pkg_name }}\.{{ .inputs.store_type }}\.[A-Z].*$'
+          msg: "transport-boundary: call the service layer, not store methods"
+        # Rule C: raw SQL inside a transport. Delete it if the module has no database/sql.
+        - pattern: '^sql\.(DB|Tx|Conn|Stmt)\.(Exec|Query|Prepare|Begin)[A-Za-z]*$'
+          msg: "transport-boundary: no raw SQL in a transport"
+    # depguard:                    # Rule B (optional): import ban; a wall where types are shared as DTOs
+    #   rules:
+    #     transports-not-store:
+    #       files: ["**/internal/api/**", "**/internal/mcp/**", "!$test"]
+    #       deny:
+    #         - pkg: "{{ .computed.module_path }}/{{ .inputs.store_pkg_path }}"
+    #           desc: "transport-boundary: transports call the service layer, not the store package"
+  exclusions:
+    generated: lax
+    rules:
+      # forbidigo has no per-path setting: scope the rules by exclusion.
+      - text: 'transport-boundary'
+        linters: [forbidigo]
+        path-except: '{{ .inputs.transport_dirs_regex }}'
+      # Only matters when merged into a config that lints tests.
+      - text: 'transport-boundary'
+        linters: [forbidigo]
+        path: '_test\.go$'
+
+issues:
+  max-issues-per-linter: 0         # the default caps at 50 and silently truncates
+  max-same-issues: 0
+  uniq-by-line: false

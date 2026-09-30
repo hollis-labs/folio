@@ -1,0 +1,7 @@
+module {{ .computed.module_path }}
+
+go {{ .inputs.go_version }}
+{{- if .inputs.go_toolchain }}
+
+toolchain go{{ .inputs.go_toolchain }}
+{{- end }}

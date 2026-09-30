@@ -1,0 +1,163 @@
+# Transport boundary: transports call the service layer, not the store
+
+Transports (HTTP handlers, MCP tools, CLI adapters) decode a request, call the
+service layer and encode the answer. They do not call store methods and do not
+write SQL. This repo enforces the mechanical half of that with a second
+golangci-lint config, `.golangci.transport.yml`, and ratchets it instead of
+walling it. The other half (two transports deciding the same thing twice) lint
+cannot see; the parity checklist below covers it.
+
+Module `{{ .computed.module_path }}`; store handle `{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}`
+(package name, not import path; store package `{{ .inputs.store_pkg_path }}`); transport packages
+`{{ .inputs.transport_dirs_regex }}`. The composition root (`cmd/`) may open the store and is outside
+the scope regex by construction.
+
+## Run it
+
+```sh
+GOWORK=off golangci-lint run --config .golangci.transport.yml ./...
+# count only (v2 has no --out-format):
+GOWORK=off golangci-lint run --config .golangci.transport.yml --issues-exit-code=0 \
+  --output.json.path=stdout --output.text.path=/dev/null --show-stats=false ./... | jq '.Issues|length'
+```
+
+Exit code is 1 on findings unless `--issues-exit-code=0`. `golangci-lint` refuses
+concurrent runs ("parallel golangci-lint is running"): serialize, or pass
+`--allow-parallel-runners`.
+
+## The rules
+
+- **Rule A (forbidigo):** `^{{ .inputs.store_pkg_name }}\.{{ .inputs.store_type }}\.[A-Z].*$`. The form is
+  `<package NAME>.<Type>.<Method>`; a fully-qualified import-path pattern matches nothing.
+  Type-only use (`{{ .inputs.store_pkg_name }}.Row`, `{{ .inputs.store_pkg_name }}.ErrX`) is not flagged.
+- **Rule C (forbidigo):** `database/sql` `DB|Tx|Conn|Stmt` `Exec|Query|Prepare|Begin*` inside a transport.
+  Delete the rule if the module has no `database/sql`.
+- **Rule B (depguard, optional, commented out in the config):** bans importing the store package from
+  transports. Affordable only where the baseline is 0 and the store's types are not shared as DTOs;
+  elsewhere it is a wall (nanite 56 import lines, torque 32 record-type imports).
+
+### Requirements that make it work (each is a silent-zero or silent-truncation trap)
+
+1. `forbidigo.analyze-types: true`: without it the pattern sees source text, not types.
+2. `run.relative-path-mode: gomod`: `path-except` is otherwise relative to the config file's directory; a
+   config outside the module sees `../../..` paths and reports 0 issues.
+3. `issues.max-issues-per-linter: 0`, `max-same-issues: 0`, `uniq-by-line: false`: the defaults cap at 50
+   and silently truncate.
+4. If the config is merged into one that lints tests, keep the `_test\.go$` exclusion (nanite 303 became
+   549 without it).
+5. Always `GOWORK=off` when the repo sits under a `go.work` (a portfolio `go.work` breaks type-checking).
+6. **CI:** any job that runs this config must use `actions/setup-go` with `go-version-file: go.mod`
+   (never `stable` or a literal), and golangci-lint `>= v2.11.4`. v2.1.6 is NOT acceptable: it is built with
+   go1.24 and refuses go 1.26 modules (recorded in folio's own v0.2.0 CHANGELOG, `go-lib` entry; not re-run for this preset).
+   v2.11.4 (built with go1.26.1) was verified linting modules at `go 1.26.6` and `go 1.26.7`.
+
+## Ratchet plan (a ratchet, not a wall)
+
+| Rung | What | Gate |
+|---|---|---|
+| R0 report-only | `--issues-exit-code=0`, print the count, commit the baseline table | none |
+| R1 new code only | `golangci-lint run --config .golangci.transport.yml --new-from-rev=$(git merge-base origin/main HEAD) ./...` | blocking, soft: sees touched lines only |
+| R2 count ceiling | CI fails if `count > ceiling`; the ceiling lives in `.github/quality/transport-baseline.txt` and only decreases | blocking |
+| R3 hard | ceiling 0: drop the ceiling file, plain non-zero exit | blocking |
+
+`--new-from-rev` demo (loom, measured 2026-09-29): `HEAD` 0, `HEAD~8` 0, `HEAD~9` 12, of 69 total. A
+revision that does not exist (loom's `HEAD~10`) makes golangci-lint warn ("could not read git repo") and
+report everything (69); it does not silently pass.
+
+R2 script (`scripts/transport-ratchet.sh`, adopted by the app team; needs `jq`):
+
+```sh
+#!/bin/sh
+# Fail when the transport-boundary finding count rises above the committed
+# ceiling. Run from the module root. The ceiling only decreases.
+set -eu
+config=${TRANSPORT_CONFIG:-.golangci.transport.yml}
+ceiling_file=${TRANSPORT_BASELINE:-.github/quality/transport-baseline.txt}
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+GOWORK=off golangci-lint run --config "$config" --issues-exit-code=0 \
+  --output.json.path="$out" --output.text.path=/dev/null --show-stats=false ./...
+count=$(jq '.Issues | length' "$out")
+ceiling=$(tr -d '[:space:]' < "$ceiling_file")
+case "$count$ceiling" in *[!0-9]*|'') echo "transport-ratchet: unreadable count or ceiling" >&2; exit 2;; esac
+echo "transport-boundary findings: $count (ceiling $ceiling)"
+if [ "$count" -gt "$ceiling" ]; then
+  echo "transport-ratchet: FAIL: $count > $ceiling; call the service layer instead" >&2
+  exit 1
+fi
+if [ "$count" -lt "$ceiling" ]; then
+  echo "transport-ratchet: lower $ceiling_file to $count in this change"
+fi
+```
+
+The count is Rule A plus Rule C together. Give the ceiling its own file: a per-linter ratchet keyed by
+linter name (nanite's `full-repo-baseline.json`, `forbidigo` 227) cannot separate two forbidigo rules, and
+adding this rule to it would blow the baseline. A new app starts at ceiling 0 (R3 from day one).
+
+## Baseline: the portfolio as measured
+
+Measured 2026-09-29 with golangci-lint v2.11.4 (go1.26.1), `GOWORK=off`, read-only from each app directory
+with this config generated per app (the only per-app inputs are the store package name/type and the
+transport regex). Counts are findings, not files.
+
+| App | Commit | Transport regex | Rule A | Rule C | Brief expected (2026-09-25) | Drift |
+|---|---|---|---|---|---|---|
+| nanite | `f707ac7d` | `^internal/(api\|selftools\|mcpserver)/`, `store.Store` | 333 (api 306, selftools 27, mcpserver 0) | 0 | api 303, selftools 27 | api +3: the app moved after the brief |
+| tesseract | `a7af190` (3 non-Go files modified in the tree) | `^internal/(contextapi\|mcpadapter\|contextcli)/`, `(contextstore\|memory\|knowledge\|event\|workspace).Store` | 220 (26 files) | 15 (all `contextapi/server.go`) | 220 / 15 | none |
+| stack-explorer | `76431fe` | `^internal/(api\|mcp)/`, `sqlite.Store` | 134 (api 110, mcp 24) | 77 | 134 / 77 | none (module path `github.com/chrispian/...` is the wrong owner, out of scope) |
+| loom | `2e8b15c` | `^internal/(api\|mcp)/`, `storage.Repository` | 65 | 4 (`mcp/cache.go`) | 65 / 4 | none |
+| tether | `a441090` | `^internal/(api\|mcpadapter\|a2aadapter\|acpadapter)/`, `store.Store` | 8 (3 files) | 0 | 8 | none |
+| torque | `06afdb9` | `^internal/(httpserver\|mcpadapter)/`, `sqlstore.Store` | 0 | 0 | 0 | none |
+| hadron | `34341a1` (2 non-Go files modified) | `^internal/(api\|mcpadapter)/`, `persistence.Store` | 0 | 0 | 0 | none; blind by design (own `Store` interfaces) |
+| tangent | `3177682` | `^internal/(server\|mcp\|ws)/`, Rule C only (`*sql.DB`) | 0 | 0 | 0 | none |
+| cerberus | `4ef9981` | `^internal/(mcp\|webui)/`, `sqlite.Store` | 0 | 0 | 0 | none. HAND-OVER: cerberus is in flight on another machine; measured read-only, do not edit from here |
+| fragments-engine | `40f9074` | `^internal/(api\|mcp)/`, `(store.Store\|repository.[A-Za-z]*Repository)` | 0 | 0 | 0 | none |
+
+Depguard (Rule B) import-line counts from the brief (nanite 56, tesseract 17, stack-explorer 5, loom 2,
+tether 17, torque 32, hadron 9, tangent 1, fragments-engine 2) were not re-measured.
+
+**The zero rows and their positive control.** Zero from a lint config is also what a silently broken config
+prints, so the zero rows were re-checked by copying each app tree to a scratch directory (never the app) and
+adding one file to the transport package that calls a store method (`s.Close()` on the store handle; for
+tangent `d.QueryContext` on a `*sql.DB`; for fragments-engine also a `repository.EnrichmentRepository`
+call). With the same config each copy reported exactly the injected calls: torque 1, hadron 1, cerberus 1,
+tangent 1 (Rule C), fragments-engine 2. So the mechanism works in those trees, and their 0 is a real 0 for
+the patterns above. It still says nothing about calls through interfaces (see limits).
+
+Recommended mode per app (from the brief, unchanged): loom is the pilot (2 files, R1 then R2); tether R3
+after fixing 8; stack-explorer and nanite ratchet (nanite's alternative is to unexport
+`service.Container.Store` rather than fix 306 call sites); tesseract stays report-only for Rule A (its
+domain stores are the service layer by design) and uses Rule C as the meaningful gate; torque, hadron,
+cerberus and fragments-engine can be R3 now as a regression guard; tangent R3 after its one depguard fix.
+
+## Transport-parity checklist
+
+1. One decision function per operation below the transports; transports decode, call, encode (hadron: two
+   `humanGateDecisionAllowed`, one in HTTP and one in MCP).
+2. Authorization and scoping live below the transports (hadron: the workspace check exists only on MCP).
+3. Not-found and conflict travel as typed sentinels checked with `errors.Is`, not
+   `strings.Contains(err.Error(), ...)`.
+4. Surface lists are enumerated at registration (tangent `ParticipantRoutes()`), not hand-maintained
+   (tesseract `observedHTTPRoutes`); waivers are explicit (tesseract `surfaceCatalog.Waiver`).
+5. Composition roots (`cmd/`, serve wiring) may open the store; list them. They sit outside the scope regex.
+6. The lint config is active on every transport package, the baseline is recorded and the ceiling only
+   decreases.
+7. Wire types are domain types, not storage records (undecided portfolio-wide; the config polices calls, not
+   type reuse).
+
+## Limits and blind spots
+
+- **Interface-mediated calls are invisible.** A transport calling through a consumer-defined interface over the
+  store (hadron `mcpadapter.Store`, tether `XStore`) looks like a legitimate service interface. Lint polices
+  the "service layer" style only; the "narrow interfaces" style needs the parity checklist and review.
+- **Type-only DTO coupling is not a handle leak** (torque `sqlstore.*Record`); Rule A does not flag it.
+- **Promotion through an embedded field is invisible.** With `type wrap struct{ *{{ .inputs.store_pkg_name }}.{{ .inputs.store_type }} }`, a call
+  `w.Get(2)` is not flagged (checked on golangci-lint v2.11.4 against a synthetic module); a direct call and a
+  call through a type alias (`type alias = {{ .inputs.store_pkg_name }}.{{ .inputs.store_type }}`) are flagged. A wrapper type that hides the store this way
+  defeats Rule A; Rule B (the import ban) catches it if the wrapper lives in a transport package.
+- **The regex scopes by path.** A transport package outside `{{ .inputs.transport_dirs_regex }}` is not checked;
+  a new transport directory needs the regex extended.
+- **Not a parity check.** Two transports implementing the same decision differently pass this gate.
+- `run.tests: false`: test files are never checked.
+- `--new-from-rev` only sees touched lines; R1 alone lets an old violation be edited without being fixed.
+- Behavior on golangci-lint releases other than v2.11.4 was not checked; re-measure after a bump.
