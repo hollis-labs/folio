@@ -4,6 +4,28 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- **`folio preset list` and `folio preset show <id>` are real commands.** They had been
+  reserved "not yet implemented" stubs since v0.1.0. `list` prints a table of every bundled
+  and user-dir preset (id, version, source, description); `show` prints one preset's metadata,
+  its own declared `composes:` entries (not a resolved chain) and its inputs, and exits 1 for
+  an unknown id. Both take `--json`. Backed by a new `Service.ListPresets`, which skips a
+  preset that fails to parse with a warning instead of failing the whole list, and omits a
+  user-dir id that a bundled preset shadows (`LoadPreset` resolves bundled first).
+- **`layer_only: bool` in `preset.yaml`** (default false, optional, backward compatible).
+  Marks a preset meant to be composed rather than rendered directly; `list` tags it `[layer]`
+  and `show` prints it. Informational only: it does not change rendering, and `folio new` does
+  not refuse a layer. Set on `go-baseline`, replacing the free-text description as the only
+  signal. A test renders every bundled preset with and without the field and asserts
+  identical file digests, so no already-scaffolded repo's `.folio.yaml` digests are affected.
+
+### Changed
+
+- README no longer keeps a hand-maintained preset table; it points at `folio preset list`.
+
 ## [0.4.0] — 2026-09-30
 
 ### Added

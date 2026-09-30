@@ -9,17 +9,18 @@ re-rendered later (and, in a future release, synced when the preset evolves).
 
 ## Status
 
-v0.2 — composition slice. Bundled presets:
+v0.3 — composition slice. Folio ships several bundled presets (Go modules,
+libraries and service apps, a Nanite plugin, a Sysop UI app) plus one
+compose-only layer, `go-baseline`, that is not meant to be rendered on its own.
+Ask folio rather than this README which presets exist:
 
-| Preset | Scaffolds |
-|---|---|
-| `base` | A minimal Go module |
-| `go-package` | An `internal/<pkg>/` library layered on `base` |
-| `go-baseline` | A layer, not a project: CI, lint config, hooks, LICENSE, CHANGELOG and `AGENTS.md` shared by Go modules — compose it, do not render it directly |
-| `go-lib` | An importable Go shared library — one package (`<pkg>/` or module root via `package_layout`), no `cmd/`/`internal/`, composed on `go-baseline` |
-| `go-service-app` | A new Go service app with the transport-boundary lint gate (`.golangci.transport.yml`, `docs/transport-boundary.md`, a ratchet ceiling) — composed on `go-baseline`, adds `go.mod` and a `cmd/<repo_name>` composition root |
-| `nanite-plugin` | A Nanite subprocess plugin (Go binary + `plugin.yaml` + optional UI) |
-| `sysop-ui` | A Sysop UI app — a `@hollis-labs/sysop-ui` React frontend served by a Go binary via `go-webui` |
+```sh
+folio preset list           # bundled and user-dir presets, with version and description
+folio preset show go-lib    # one preset's metadata, composes: entries and inputs
+```
+
+Add `--json` to either for machine-readable output. A preset marked `[layer]`
+(`layer_only: true` in its `preset.yaml`) exists to be composed by other presets.
 
 `folio new` / `folio plan` / `folio preset validate` all understand
 `composes:`. Sync, post-render Hadron hooks, federated git-URL preset
@@ -53,7 +54,9 @@ for everything required.
 | `folio new <preset> <dir>` | Render a preset into `<dir>`. Prompts for missing inputs unless `--non-interactive`. |
 | `folio plan <preset> <dir>` | Dry-run — print resolved inputs + computed values + planned file list. No writes. |
 | `folio preset validate <preset-dir>` | Run the v0 validation rule set against `<preset-dir>/preset.yaml`. |
-| `folio sync` / `folio inspect` / `folio preset list` / `folio preset show` | Reserved — print "not yet implemented in v0" and exit 1. |
+| `folio preset list [--json]` | List every bundled and user-dir preset (`~/.folio/presets/local/<id>@<version>/`) with its version, source and description. |
+| `folio preset show <id> [--json]` | Show one preset's metadata, its own declared `composes:` entries (not a resolved chain) and its inputs. Exits 1 if the id is unknown. |
+| `folio sync` / `folio inspect` | Reserved — print "not yet implemented in v0" and exit 1. |
 
 ## Composing presets
 
