@@ -4,6 +4,28 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-09-29
+
+### Added
+
+- **`go-service-app` preset (0.1.0): a transport-boundary lint gate for new service apps.**
+  Composed on `go-baseline`; renders `go.mod`, a `cmd/<repo_name>` composition root,
+  `.golangci.transport.yml` (a standalone second golangci-lint config: forbidigo Rule A
+  forbids store-handle method calls and Rule C raw `database/sql` calls inside the transport
+  packages, with an optional commented depguard Rule B), `docs/transport-boundary.md`
+  (portfolio baseline measured at recorded app commits, ratchet plan R0-R3 with a ceiling
+  script, parity checklist, limits, CI requirements) and
+  `.github/quality/transport-baseline.txt` (ceiling 0). Inputs: `repo_name`,
+  `store_pkg_name`, `store_type` (required), `transport_dirs_regex`, `store_pkg_path`, plus
+  go-baseline's (`go_version` defaults 1.26.6). Composed on `go-baseline` rather than `base`
+  because `base` renders `ci.yml` with a literal `go-version` (the gate requires
+  `go-version-file: go.mod`), a Makefile and a hello-world program; the cost is that this
+  preset owns `go.mod` and one Go package, as `go-lib` does. The integration tests render it,
+  run `golangci-lint config verify` on the result and run the rendered config against a
+  synthetic module (positive control: `a.Store.Get(1)` in a transport is flagged, `store.Row`
+  in a signature, the service layer and a path outside the regex are not). A missing
+  golangci-lint is a visible skip, a failure under `FOLIO_REQUIRE_TOOLS=1`.
+
 ## [0.2.0] — 2026-09-29
 
 Composition slice. `composes:` becomes a working layered render driving a

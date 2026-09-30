@@ -1,0 +1,10 @@
+// Command {{ .inputs.repo_name }} is the composition root of {{ .inputs.repo_name }}: it opens
+// the store, builds the service layer and hands only the service layer to the
+// transports. It is outside the transport scope of .golangci.transport.yml.
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("{{ .inputs.repo_name }}")
+}

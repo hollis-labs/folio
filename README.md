@@ -17,6 +17,7 @@ v0.2 — composition slice. Bundled presets:
 | `go-package` | An `internal/<pkg>/` library layered on `base` |
 | `go-baseline` | A layer, not a project: CI, lint config, hooks, LICENSE, CHANGELOG and `AGENTS.md` shared by Go modules — compose it, do not render it directly |
 | `go-lib` | An importable Go shared library — one package (`<pkg>/` or module root via `package_layout`), no `cmd/`/`internal/`, composed on `go-baseline` |
+| `go-service-app` | A new Go service app with the transport-boundary lint gate (`.golangci.transport.yml`, `docs/transport-boundary.md`, a ratchet ceiling) — composed on `go-baseline`, adds `go.mod` and a `cmd/<repo_name>` composition root |
 | `nanite-plugin` | A Nanite subprocess plugin (Go binary + `plugin.yaml` + optional UI) |
 | `sysop-ui` | A Sysop UI app — a `@hollis-labs/sysop-ui` React frontend served by a Go binary via `go-webui` |
 
