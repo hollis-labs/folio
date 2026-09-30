@@ -15,13 +15,16 @@ import "gopkg.in/yaml.v3"
 // shape-validated at parse time; cross-preset rules and execution run in
 // internal/compose. post_render is parsed but ignored (validation emits a
 // warning). sync is parsed and stored for forward-compatibility but not yet
-// acted on.
+// acted on. layer_only is informational: it marks a preset meant to be composed
+// by others rather than rendered directly, is surfaced by `folio preset list`
+// and `show`, and never changes what a render produces.
 type Preset struct {
 	FolioVersion string            `yaml:"folio_version"`
 	ID           string            `yaml:"id"`
 	Version      string            `yaml:"version"`
 	Description  string            `yaml:"description,omitempty"`
 	Author       string            `yaml:"author,omitempty"`
+	LayerOnly    bool              `yaml:"layer_only,omitempty"`
 	License      string            `yaml:"license,omitempty"`
 	Composes     []ComposeEntry    `yaml:"composes,omitempty"`
 	Inputs       []Input           `yaml:"inputs,omitempty"`

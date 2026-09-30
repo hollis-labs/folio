@@ -110,3 +110,35 @@ func TestFiles_TemplateSuffixOrDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestParse_LayerOnly(t *testing.T) {
+	p, err := preset.Parse(filepath.Join("testdata", "valid", "layer_only.yaml"))
+	if err != nil {
+		t.Fatalf("Parse layer_only: %v", err)
+	}
+	if !p.LayerOnly {
+		t.Error("LayerOnly = false, want true")
+	}
+	if res := p.Validate(); !res.OK() {
+		t.Errorf("layer_only preset should validate, got %v", res.Errors)
+	}
+}
+
+func TestParse_LayerOnlyDefaultsFalse(t *testing.T) {
+	// Backward compatibility: every preset written before the field existed
+	// omits it and must still parse as a normal, renderable preset.
+	p, err := preset.Parse(filepath.Join("testdata", "valid", "minimal.yaml"))
+	if err != nil {
+		t.Fatalf("Parse minimal: %v", err)
+	}
+	if p.LayerOnly {
+		t.Error("LayerOnly = true for a preset that does not declare it")
+	}
+}
+
+func TestParseBytes_LayerOnlyMustBeBool(t *testing.T) {
+	_, err := preset.ParseBytes([]byte("folio_version: \"0.1\"\nid: x\nversion: 1.0.0\nlayer_only: [1, 2]\nfiles:\n  source: ./files\n"))
+	if err == nil {
+		t.Fatal("expected a decode error for a non-bool layer_only")
+	}
+}

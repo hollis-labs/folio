@@ -4,6 +4,7 @@ version: 0.1.0
 description: Shared Go baseline layer (CI, lint, hooks, LICENSE, CHANGELOG, AGENTS.md) — compose, do not render directly
 author: hollis-labs
 license: MIT
+layer_only: true
 
 # A LAYER, not a project. It renders no go.mod and no Go source: the composing
 # preset (today `go-lib`) owns those and must redeclare the inputs it requires

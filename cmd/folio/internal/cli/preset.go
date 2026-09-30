@@ -16,9 +16,8 @@ func presetCmd(bundledFS fs.FS, version string) *cobra.Command {
 		Short: "Inspect and validate presets",
 	}
 	cmd.AddCommand(presetValidateCmd(bundledFS, version))
-	for _, name := range []string{"list", "show"} {
-		cmd.AddCommand(stubCmd(name))
-	}
+	cmd.AddCommand(presetListCmd(bundledFS, version))
+	cmd.AddCommand(presetShowCmd(bundledFS, version))
 	return cmd
 }
 

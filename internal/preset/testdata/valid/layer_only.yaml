@@ -1,0 +1,6 @@
+folio_version: "0.1"
+id: a-layer
+version: 1.0.0
+layer_only: true
+files:
+  source: ./files
