@@ -4,6 +4,34 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-30
+
+### Added
+
+- `platform-pins.yaml`: the single canonical manifest of the portfolio's version
+  pins (Go floor 1.26.6, `actions/checkout` v5, `actions/setup-go` v6,
+  `golangci-lint-action` v7, golangci-lint v2.11.4, govulncheck v1.8.0).
+- `scripts/check-platform-pins-drift.sh` (`make pins`): fails when a preset
+  `go_version` default, a preset workflow template, folio's own CI, the
+  conformance script's floor literals or (`--checklist FILE`) the ratified lib
+  checklist's C4 citation disagrees with the manifest. `--self-test` is the
+  positive control: one deliberate break per pin in a scratch copy, each required
+  to fail exactly its own check.
+
+### Changed
+
+- Folio's own `.github/workflows/ci.yml` no longer uses `golangci-lint version:
+  latest` or `govulncheck@latest`: it pins the manifest's versions, moves to
+  checkout v5 / setup-go v6 / golangci-lint-action v7, and runs the drift check.
+  This closes the "still deferred" item recorded under 0.3.0.
+- The `base` and `sysop-ui` workflow templates render `actions/checkout@v5` and
+  `actions/setup-go@v6` (were v4/v5; setup-go v5 ignores a `toolchain` line).
+
+### Out of scope (still deferred)
+
+- Folio's render engine reading `platform-pins.yaml` at render time; the presets
+  still carry the pin literals and the drift check is what keeps them honest.
+
 ## [0.3.0] — 2026-09-29
 
 ### Added

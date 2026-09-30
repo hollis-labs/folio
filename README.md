@@ -158,12 +158,22 @@ make test       # go test -race ./...
 make vet        # go vet ./...
 make lint       # golangci-lint run
 make vuln       # govulncheck ./...
+make pins       # drift-check every version pin against platform-pins.yaml
 make build      # build the folio binary
 make install    # go install ./cmd/folio
 ```
 
-CI runs `go test -race`, `go vet`, `golangci-lint`, and `govulncheck` on
-push and pull requests to `main`.
+CI runs `go test -race`, `go vet`, `golangci-lint`, `govulncheck` and the pins
+drift check on push and pull requests to `main`.
+
+`platform-pins.yaml` is the single canonical source for the portfolio's version
+pins (Go floor, `actions/checkout`, `actions/setup-go`, golangci-lint action and
+binary, govulncheck). It does not drive rendering yet: the presets still carry
+the literals, and `scripts/check-platform-pins-drift.sh` fails when any of them —
+preset `go_version` defaults, rendered workflow templates, folio's own CI, the
+conformance script's floor, or (with `--checklist FILE`) the ratified lib
+checklist — disagrees with the manifest. `--self-test` breaks one value at a time
+in a scratch copy and requires exactly that check to fail.
 
 ## License
 
