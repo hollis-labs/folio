@@ -776,3 +776,121 @@ func pathJoin(parts ...string) string {
 	}
 	return path.Join(clean...)
 }
+
+// PresetSummary is the identity and human-facing metadata of one
+// discoverable preset. It is the row `folio preset list` prints and the shape
+// a future MCP or HTTP surface would serialize directly.
+type PresetSummary struct {
+	ID          string `json:"id"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+	Author      string `json:"author"`
+	// Source is "bundled" (compiled into the binary) or "local" (the user
+	// dir). It matches LoadedPreset.Source.
+	Source string `json:"source"`
+	// LayerOnly mirrors preset.yaml's layer_only: the preset is meant to be
+	// composed, not rendered directly.
+	LayerOnly bool `json:"layer_only"`
+}
+
+// ListPresets enumerates every preset LoadPreset can resolve: bundled presets
+// first (one per directory, sorted by id), then user-dir presets (the highest
+// version of each id, mirroring findUserPreset). A user-dir id that a bundled
+// preset already claims is omitted, because LoadPreset resolves bundled first.
+//
+// A preset that fails to parse or validate is skipped and reported in the
+// returned warnings, not as an error, so one broken user preset cannot hide
+// the rest. The error is reserved for a user dir that exists but cannot be
+// read.
+func (s *Service) ListPresets() ([]PresetSummary, []string, error) {
+	var out []PresetSummary
+	var warnings []string
+	bundled := map[string]bool{}
+
+	if s.bundledFS != nil {
+		entries, err := fs.ReadDir(s.bundledFS, s.bundledRoot)
+		if err == nil {
+			for _, e := range entries {
+				if !e.IsDir() {
+					continue
+				}
+				sub := pathJoin(s.bundledRoot, e.Name())
+				lp, err := s.loadFromSubFS(s.bundledFS, sub, "bundled", "bundled:"+sub)
+				if err != nil {
+					warnings = append(warnings, fmt.Sprintf("skipped bundled preset %q: %v", e.Name(), err))
+					continue
+				}
+				out = append(out, summarize(lp))
+				bundled[e.Name()] = true
+			}
+		}
+	}
+
+	if s.userDir == "" {
+		return out, warnings, nil
+	}
+	entries, err := os.ReadDir(s.userDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return out, warnings, nil
+		}
+		return out, warnings, newErr(ErrInternal, fmt.Sprintf("read user dir %s", s.userDir), err)
+	}
+
+	// Group "<id>@<version>" directories by id, then pick the highest
+	// version per id exactly as findUserPreset does.
+	versionsByID := map[string][]string{}
+	dirByIDVersion := map[string]string{}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		id, ver, ok := strings.Cut(e.Name(), "@")
+		if !ok || id == "" || ver == "" {
+			continue
+		}
+		versionsByID[id] = append(versionsByID[id], ver)
+		dirByIDVersion[id+"@"+ver] = e.Name()
+	}
+	ids := make([]string, 0, len(versionsByID))
+	for id := range versionsByID {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		if bundled[id] {
+			warnings = append(warnings, fmt.Sprintf("user preset %q is shadowed by the bundled preset of the same id", id))
+			continue
+		}
+		picked, err := compose.ResolveVersion(compose.MatchAny(), versionsByID[id])
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("skipped user preset %q: %v", id, err))
+			continue
+		}
+		name := dirByIDVersion[id+"@"+picked]
+		full := filepath.Join(s.userDir, name)
+		lp, err := s.loadFromSubFS(os.DirFS(full), ".", "local", full)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("skipped user preset %q: %v", name, err))
+			continue
+		}
+		if lp.Preset.ID != id {
+			warnings = append(warnings, fmt.Sprintf("skipped user preset %q: directory id does not match preset.yaml id %q", name, lp.Preset.ID))
+			continue
+		}
+		out = append(out, summarize(lp))
+	}
+	return out, warnings, nil
+}
+
+func summarize(lp *LoadedPreset) PresetSummary {
+	p := lp.Preset
+	return PresetSummary{
+		ID:          p.ID,
+		Version:     p.Version,
+		Description: p.Description,
+		Author:      p.Author,
+		Source:      lp.Source,
+		LayerOnly:   p.LayerOnly,
+	}
+}

@@ -3,10 +3,11 @@
 folio renders a typed preset — a `preset.yaml` manifest plus a `text/template`
 file tree — into a new project directory, leaving a `.folio.yaml` breadcrumb
 that records what was rendered. It does not build, install, run or update the
-projects it generates, and `folio sync` and `folio inspect` are reserved stubs
-that error rather than doing anything. The one thing it does after rendering is
-opt-in: `folio new --create-github-repo` runs `git init`, an initial commit and
-`gh repo create` against the tree it just wrote.
+projects it generates, and `folio sync` and `folio inspect` are the only
+reserved stubs — they error rather than doing anything. `folio preset list` and
+`folio preset show` are real (they were stubs through v0.3.0). The one thing it
+does after rendering is opt-in: `folio new --create-github-repo` runs `git init`,
+an initial commit and `gh repo create` against the tree it just wrote.
 
 ## Start Here
 
@@ -32,7 +33,10 @@ opt-in: `folio new --create-github-repo` runs `git init`, an initial commit and
 - `internal/render/funcmap.go` owns the template funcmap.
 - `internal/manifest/digest.go` owns the breadcrumb's per-file digests.
 - `presets/` holds the bundled presets; the first directory level under it is
-  the preset id.
+  the preset id. `Service.ListPresets` enumerates them (and the user dir) for
+  `folio preset list`; do not restate the preset set in prose, ask the command.
+  `layer_only: true` in a `preset.yaml` is informational only — it must never
+  change what a preset renders.
 - `service.New`'s actual write to disk goes through
   [`go-materialize`](https://github.com/hollis-labs/go-materialize)'s
   `materialize.Engine` (atomic staged create, symlink/traversal-safe),
