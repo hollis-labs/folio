@@ -3,9 +3,10 @@
 folio renders a typed preset — a `preset.yaml` manifest plus a `text/template`
 file tree — into a new project directory, leaving a `.folio.yaml` breadcrumb
 that records what was rendered. It does not build, install, run or update the
-projects it generates, and `folio sync` and `folio inspect` are the only
-reserved stubs — they error rather than doing anything. `folio preset list` and
-`folio preset show` are real (they were stubs through v0.3.0). The one thing it
+projects it generates, and `folio sync` is the only reserved stub — it errors
+rather than doing anything. `folio preset list` and
+`folio preset show` are real (they were stubs through v0.3.0), and so is
+`folio inspect`, a read-only drift report (a stub until it lands in a release). The one thing it
 does after rendering is opt-in: `folio new --create-github-repo` runs `git init`,
 an initial commit and `gh repo create` against the tree it just wrote.
 

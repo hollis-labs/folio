@@ -4,6 +4,37 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`folio inspect <dir> [--json]` is a real command** (was a reserved stub). It re-renders the
+  preset recorded in `<dir>/.folio.yaml` with the recorded inputs and reports, per tracked file,
+  `unchanged`, `preset_updated`, `locally_modified`, `conflict`, `added_upstream`,
+  `removed_upstream` or `missing_locally`, by comparing the file on disk and the fresh render
+  each against the digest recorded at generation. Read-only; exits 0 whenever it can produce a
+  report. `service.Service.Inspect` is the API behind it.
+  - The render replays the clock (`generated_at`) and folio version (`generator`) recorded in
+    the manifest. Without that, every preset whose `LICENSE` reads `{{ .now.Year }}` (base,
+    go-baseline and so go-lib and go-service-app, sysop-ui, nanite-plugin) would report
+    `LICENSE` as `preset_updated` once the calendar year turns.
+  - A file whose preset renders different bytes on every run (`uuid`, `randAlphaNum`) is found
+    by rendering twice, marked `unstable` (`*` in the table), and compared for local edits only,
+    with a warning.
+  - `.target` is not replayed: a template that prints the project's absolute path reports drift
+    when the project has moved.
+  - `.folio.yaml` is written by whoever owns the project, so its file paths are untrusted: a
+    path that is not a relative path inside the project (`..`, absolute, empty) is skipped with
+    a warning and never read, and so is a tracked file that is a symlink leaving the project.
+  - Not a sync: `.folio.yaml` stores digests, not the original bytes, so there is no base for a
+    three-way merge. `folio sync` stays a reserved stub.
+- New error codes `manifest_not_found`, `manifest_invalid`, `read_failed`, `drift_unverifiable`.
+
+### Changed
+
+- `New` and `Plan` share one `renderAllLayers` with `Inspect` instead of two copies of the same
+  loop; their results are unchanged.
+
 ## [0.5.0] — 2026-09-30
 
 ### Added

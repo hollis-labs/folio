@@ -66,11 +66,12 @@ directory; ` + "`folio plan`" + ` previews the same render without writing.`,
 	root.AddCommand(makeCmd(bundledFS, version))
 	root.AddCommand(planCmd(bundledFS, version))
 	root.AddCommand(presetCmd(bundledFS, version))
+	root.AddCommand(inspectCmd(bundledFS, version))
 
 	// Reserved subcommands. These announce themselves as "not yet
 	// implemented" so users get a clear signal that the surface is planned
 	// rather than missing or buggy.
-	for _, name := range []string{"sync", "inspect"} {
+	for _, name := range []string{"sync"} {
 		root.AddCommand(stubCmd(name))
 	}
 
