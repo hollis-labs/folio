@@ -5,3 +5,8 @@ go {{ .inputs.go_version }}
 
 toolchain go{{ .inputs.go_toolchain }}
 {{- end }}
+
+require (
+	github.com/hollis-labs/go-apppaths v0.3.0
+	github.com/hollis-labs/go-otel v0.10.0
+)

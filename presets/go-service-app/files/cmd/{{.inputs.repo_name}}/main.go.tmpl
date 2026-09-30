@@ -1,10 +1,75 @@
-// Command {{ .inputs.repo_name }} is the composition root of {{ .inputs.repo_name }}: it opens
-// the store, builds the service layer and hands only the service layer to the
-// transports. It is outside the transport scope of .golangci.transport.yml.
+// Command {{ .inputs.repo_name }} is the composition root of {{ .inputs.repo_name }}: it resolves the
+// app's paths, gates telemetry, opens the store, builds the service layer and
+// hands only the service layer to the transports. It is outside the transport
+// scope of .golangci.transport.yml.
 package main
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/hollis-labs/go-apppaths/paths"
+	hotel "github.com/hollis-labs/go-otel"
+
+	"{{ .computed.module_path }}/internal/service"
+	{{ if ne "store" .inputs.store_pkg_name }}{{ .inputs.store_pkg_name }} {{ end }}"{{ .computed.module_path }}/internal/store"
+)
+
+const (
+	// appName is the go-apppaths identity: it names the XDG directories and the
+	// {{ .computed.env_prefix }}_* variables paths.Resolve reads ({{ .computed.env_prefix }}_DB_PATH, {{ .computed.env_prefix }}_WORKSPACE).
+	appName = "{{ .computed.app }}"
+	// otelEnvVar turns telemetry on. Telemetry is opt-in: HOLLIS_OTEL_ENABLED
+	// (portfolio-wide, and a kill switch when false) wins, then this variable.
+	otelEnvVar = "{{ .computed.otel_var }}"
+	// envEnvVar overrides the deployment-environment tag; HOLLIS_ENV wins over it.
+	envEnvVar = "{{ .computed.env_prefix }}_ENV"
+)
 
 func main() {
-	fmt.Println("{{ .inputs.repo_name }}")
+	if err := run(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// run holds the wiring so its defers (the telemetry flush, the store close) run
+// before main exits; log.Fatal in main would skip them.
+func run(ctx context.Context) error {
+	// Resolve once, inject downward. WithLegacyNames adopts the data of an
+	// earlier name of this app (a rename) before anything is created.
+	layout, err := paths.Resolve(appName{{ if .computed.legacy_args }}, paths.WithLegacyNames({{ .computed.legacy_args }}){{ end }})
+	if err != nil {
+		return fmt.Errorf("resolve paths: %w", err)
+	}
+
+	if hotel.EnabledFromEnv(otelEnvVar) {
+		defer hotel.InitOrWarn(ctx, log.Printf, 5*time.Second,
+			hotel.WithServiceName(appName),
+			hotel.WithEnvironment(hotel.EnvironmentFromEnv(envEnvVar, "dev")),
+		)()
+	}
+
+	// TODO(author): open the real store here. The placeholder in
+	// internal/store opens nothing; replace it with your database.
+	st, err := {{ .inputs.store_pkg_name }}.Open(layout.MainDB())
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	defer func() {
+		if cerr := st.Close(); cerr != nil {
+			log.Printf("warning: close store: %v", cerr)
+		}
+	}()
+
+	// The service layer is the only thing handed to the transports; they never
+	// receive st.
+	svc := service.New(st)
+
+	// TODO(author): build the transports (internal/api, internal/mcp, a CLI) on
+	// svc and run them until ctx is done.
+	_ = svc
+	log.Printf("{{ .inputs.repo_name }}: data %s", layout.DataDir())
+	return nil
 }

@@ -1,0 +1,27 @@
+// Package {{ .inputs.store_pkg_name }} is the placeholder store of {{ .inputs.repo_name }}. It opens nothing; replace it
+// with the real store (SQLite, Postgres, ...). The service layer is the only
+// package that may use it besides the composition root: transports go through
+// the service layer (docs/transport-boundary.md).
+//
+// It renders at internal/store whatever store_pkg_path says (a path cannot be
+// templated into a file name). If the real store lives elsewhere, move it there
+// and update the two imports (cmd/{{ .inputs.repo_name }}/main.go, internal/service/service.go).
+package {{ .inputs.store_pkg_name }}
+
+// {{ .inputs.store_type }} is the store handle. Its methods are what the transport gate forbids
+// transports to call.
+type {{ .inputs.store_type }} struct {
+	path string
+}
+
+// Open returns the store for the database at path. TODO(author): open the real
+// database here; path is the location go-apppaths resolved for it.
+func Open(path string) (*{{ .inputs.store_type }}, error) {
+	return &{{ .inputs.store_type }}{path: path}, nil
+}
+
+// Path returns the database path the store was opened with.
+func (s *{{ .inputs.store_type }}) Path() string { return s.path }
+
+// Close releases the store.
+func (s *{{ .inputs.store_type }}) Close() error { return nil }

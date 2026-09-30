@@ -63,6 +63,8 @@ func TestGoServiceApp_RendersTree(t *testing.T) {
 		"cmd/my-service/main.go",
 		"docs/transport-boundary.md",
 		"go.mod",
+		"internal/service/service.go",
+		"internal/store/store.go",
 		"lefthook.yml",
 	}
 	for _, p := range want {
@@ -154,9 +156,170 @@ func TestGoServiceApp_RendersTree(t *testing.T) {
 		t.Errorf("attribution of .golangci.transport.yml = %q", got)
 	}
 
-	if _, lookErr := exec.LookPath("go"); lookErr == nil {
+	if _, lookErr := exec.LookPath("go"); lookErr == nil && goModTidy(t, target) {
 		mustRun(t, target, "go", "vet", "./...")
 		mustRun(t, target, "go", "build", "./...")
+	}
+}
+
+// goModTidy runs `go mod tidy` in a rendered app: go.sum is not rendered, so
+// the go-otel and go-apppaths requirements only resolve after it, which needs
+// the module proxy. Without the network the caller's build assertions are a
+// visible SKIP (a failure under FOLIO_REQUIRE_TOOLS=1), never a silent pass.
+func goModTidy(t *testing.T, dir string) bool {
+	t.Helper()
+	if out, err := run(t, dir, "go", "mod", "tidy"); err != nil {
+		if os.Getenv("FOLIO_REQUIRE_TOOLS") == "1" {
+			t.Fatalf("go mod tidy (FOLIO_REQUIRE_TOOLS=1): %v\n%s", err, out)
+		}
+		t.Logf("SKIPPED, not passed: build assertions need `go mod tidy` (network): %v\n%s", err, out)
+		return false
+	}
+	return true
+}
+
+func TestGoServiceApp_WiresTheServiceLayer(t *testing.T) {
+	target, err := renderGoServiceApp(t, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := readText(t, filepath.Join(target, "cmd", "my-service", "main.go"))
+	for _, s := range []string{
+		`appName = "my-service"`,
+		`otelEnvVar = "MY_SERVICE_OTEL_ENABLED"`,
+		`envEnvVar = "MY_SERVICE_ENV"`,
+		"paths.Resolve(appName)",
+		"hotel.EnabledFromEnv(otelEnvVar)",
+		"defer hotel.InitOrWarn(ctx, log.Printf, 5*time.Second,",
+		"hotel.EnvironmentFromEnv(envEnvVar",
+		"store.Open(layout.MainDB())",
+		"svc := service.New(st)",
+		"TODO(author): open the real store",
+	} {
+		if !strings.Contains(main, s) {
+			t.Errorf("main.go missing %q:\n%s", s, main)
+		}
+	}
+	// No legacy names by default: a new app has no legacy to adopt.
+	if strings.Contains(main, "paths.WithLegacyNames(") {
+		t.Errorf("default render must not call paths.WithLegacyNames:\n%s", main)
+	}
+
+	svc := readText(t, filepath.Join(target, "internal", "service", "service.go"))
+	for _, s := range []string{
+		"\tstore *store.Store\n",
+		"func (s *Service) Store() *store.Store { return s.store }",
+		"func New(st *store.Store) *Service {",
+		"return &Service{store: st}",
+	} {
+		if !strings.Contains(svc, s) {
+			t.Errorf("service.go missing %q:\n%s", s, svc)
+		}
+	}
+	if strings.Contains(svc, "\tStore *store.Store") {
+		t.Errorf("the store field must be unexported")
+	}
+
+	gomod := readText(t, filepath.Join(target, "go.mod"))
+	for _, s := range []string{
+		"github.com/hollis-labs/go-apppaths v0.3.0",
+		"github.com/hollis-labs/go-otel v0.10.0",
+	} {
+		if !strings.Contains(gomod, s) {
+			t.Errorf("go.mod missing require %q:\n%s", s, gomod)
+		}
+	}
+
+	doc := readText(t, filepath.Join(target, "docs", "transport-boundary.md"))
+	if !strings.Contains(doc, "`Store()` is the one sanctioned crossing point") {
+		t.Errorf("docs/transport-boundary.md does not name the Store() escape hatch")
+	}
+}
+
+func TestGoServiceApp_ServiceLayerInputsRender(t *testing.T) {
+	target, err := renderGoServiceApp(t, map[string]any{
+		"app_name":       "acme-svc",
+		"otel_env_var":   "ACME_TRACING",
+		"legacy_names":   "old-svc,older",
+		"store_pkg_name": "sqlite",
+		"store_type":     "DB",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	main := readText(t, filepath.Join(target, "cmd", "my-service", "main.go"))
+	for _, s := range []string{
+		`appName = "acme-svc"`,
+		`otelEnvVar = "ACME_TRACING"`,
+		`envEnvVar = "ACME_SVC_ENV"`,
+		`paths.Resolve(appName, paths.WithLegacyNames("old-svc", "older"))`,
+		`sqlite "github.com/hollis-labs/my-service/internal/store"`,
+		"sqlite.Open(layout.MainDB())",
+	} {
+		if !strings.Contains(main, s) {
+			t.Errorf("main.go missing %q:\n%s", s, main)
+		}
+	}
+	if !strings.Contains(readText(t, filepath.Join(target, "internal", "service", "service.go")), "store *sqlite.DB") {
+		t.Errorf("service.go does not use the overridden store type")
+	}
+	if !strings.Contains(readText(t, filepath.Join(target, "internal", "store", "store.go")), "package sqlite\n") {
+		t.Errorf("the placeholder store must take store_pkg_name")
+	}
+
+	if _, lookErr := exec.LookPath("go"); lookErr == nil && goModTidy(t, target) {
+		mustRun(t, target, "go", "vet", "./...")
+		mustRun(t, target, "go", "build", "./...")
+	}
+
+	for name, in := range map[string]map[string]any{
+		"uppercase app_name":   {"app_name": "Acme"},
+		"lowercase otel var":   {"otel_env_var": "acme_otel"},
+		"malformed legacy":     {"legacy_names": "a,,b"},
+		"legacy with a quote":  {"legacy_names": `a"b`},
+		"app_name with a path": {"app_name": "a/b"},
+	} {
+		if _, err := renderGoServiceApp(t, in); err == nil {
+			t.Errorf("%s must be rejected", name)
+		}
+	}
+}
+
+// TestGoServiceApp_StoreFieldIsUnexported is the positive control for the
+// escape-hatch shape: from outside the service package the raw field cannot be
+// reached (a compile error, so the assertion is not a string match on the
+// template) while Store() can.
+func TestGoServiceApp_StoreFieldIsUnexported(t *testing.T) {
+	needTool(t, "go")
+	target, err := renderGoServiceApp(t, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !goModTidy(t, target) {
+		return
+	}
+	probe := filepath.Join(target, "internal", "probe")
+	if mkErr := os.MkdirAll(probe, 0o755); mkErr != nil {
+		t.Fatal(mkErr)
+	}
+	write := func(body string) {
+		t.Helper()
+		src := "package probe\n\nimport \"github.com/hollis-labs/my-service/internal/service\"\n\n" + body
+		if wErr := os.WriteFile(filepath.Join(probe, "probe.go"), []byte(src), 0o644); wErr != nil {
+			t.Fatal(wErr)
+		}
+	}
+
+	write("func Path(s *service.Service) string { return s.Store().Path() }\n")
+	mustRun(t, target, "go", "build", "./internal/probe")
+
+	write("func Path(s *service.Service) string { return s.store.Path() }\n")
+	out, err := run(t, target, "go", "build", "./internal/probe")
+	if err == nil {
+		t.Fatalf("reaching s.store from outside the service package must not compile")
+	}
+	if !strings.Contains(out, "s.store undefined") {
+		t.Errorf("expected s.store to be undefined outside the package, got:\n%s", out)
 	}
 }
 
