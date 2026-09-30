@@ -14,6 +14,10 @@ opt-in: `folio new --create-github-repo` runs `git init`, an initial commit and
   template-helper catalog.
 - `CHANGELOG.md` — `### Out of scope (still deferred)` is the live roadmap
   surface and is authoritative for what is not implemented.
+- `platform-pins.yaml` is the canonical version-pin manifest;
+  `scripts/check-platform-pins-drift.sh` (`make pins`) fails when a preset
+  default, workflow template, folio's own CI or the conformance script's floor
+  disagrees. Change a pin in the manifest first, then fix what the check names.
 - `service/service.go` is the canonical API. `cmd/folio/internal/cli/` is a
   thin cobra wrapper over it, and future MCP or HTTP surfaces wrap the same
   methods rather than reimplementing them.
@@ -48,7 +52,7 @@ make all
 ```
 
 `make all` is tidy + vet + lint + test-race and matches CI, which gates on
-`go vet`, `go test -race`, `golangci-lint` and `govulncheck`. The top-level
+`go vet`, `go test -race`, `golangci-lint`, `govulncheck` and `make pins`. The top-level
 `integration_*_test.go` files render each bundled preset into a temp directory
 and compile the result, so they are what catches a broken preset — run the full
 `make test` when you touch `presets/`. `integration_github_test.go` is the

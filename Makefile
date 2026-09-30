@@ -1,4 +1,4 @@
-.PHONY: build install test test-race vet lint vuln clean tidy all
+.PHONY: build install test test-race vet lint vuln pins clean tidy all
 
 # Default: build the folio binary into the repo root.
 build:
@@ -24,6 +24,11 @@ lint:
 # Govulncheck — gate per portfolio Go baseline (feedback_go_ecosystem_baseline).
 vuln:
 	govulncheck ./...
+
+# Every version pin this repo carries must agree with platform-pins.yaml.
+pins:
+	sh scripts/check-platform-pins-drift.sh .
+	sh scripts/check-platform-pins-drift.sh . --self-test
 
 tidy:
 	go mod tidy

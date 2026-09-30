@@ -1,0 +1,23 @@
+# platform-pins.yaml — single canonical source for every version pin the
+# hollis-labs Go portfolio commits to. Every folio preset's go_version input
+# default, every rendered CI workflow's tool-version pins, folio's own dev CI,
+# folio's conformance script floor, and LIB-STANDARD-CHECKLIST.md's cited
+# versions must match this file. Checked by scripts/check-platform-pins-drift.sh.
+#
+# This file has no effect on rendering by itself today (folio's preset engine
+# does not read it yet) -- see CHANGELOG.md for the wiring follow-up.
+#
+# Keep it flat: two levels, `key: "value"`, one value per line. The drift check
+# reads it with awk, not a YAML parser.
+
+go:
+  version: "1.26.6"           # portfolio floor -- decision go_floor_1_26_6_everywhere
+  # a per-repo `toolchain` line stays a LOCAL escape hatch (go-baseline's
+  # go_toolchain input), never a substitute for this floor on the `go` line.
+
+ci:
+  actions_checkout: "v5"
+  actions_setup_go: "v6"      # v6+ honors a toolchain line; v5 silently ignores it
+  golangci_lint_action: "v7"  # golangci/golangci-lint-action tag
+  golangci_lint_version: "v2.11.4"
+  govulncheck_version: "v1.8.0"
