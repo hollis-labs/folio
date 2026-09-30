@@ -446,7 +446,6 @@ func TestGoLib_ComposeAttribution(t *testing.T) {
 		"LICENSE":                       "go-baseline",
 		"CHANGELOG.md":                  "go-baseline",
 		"AGENTS.md":                     "go-baseline",
-		"CLAUDE.md":                     "go-baseline",
 		"README.md":                     "go-lib",
 		"go.mod":                        "go-lib",
 		"demo/doc.go":                   "go-lib",
@@ -465,9 +464,6 @@ func TestGoLib_ComposeAttribution(t *testing.T) {
 		if rec.Preset != preset {
 			t.Errorf("manifest.files[%q].preset = %q, want %q", path, rec.Preset, preset)
 		}
-	}
-	if got := strings.TrimSpace(readText(t, filepath.Join(dir, "CLAUDE.md"))); got != "@AGENTS.md" {
-		t.Errorf("CLAUDE.md = %q, want exactly @AGENTS.md", got)
 	}
 
 	svc := newGoLibService(t)

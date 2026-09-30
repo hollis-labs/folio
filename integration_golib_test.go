@@ -50,7 +50,6 @@ func TestIntegration_GoLibPreset(t *testing.T) {
 		".golangci.yml",
 		"AGENTS.md",
 		"CHANGELOG.md",
-		"CLAUDE.md",
 		"LICENSE",
 		"README.md",
 		"examples/hello/main.go",

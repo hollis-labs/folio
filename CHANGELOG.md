@@ -4,6 +4,12 @@ All notable changes to folio are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **`go-baseline` no longer renders `CLAUDE.md`.** The one-line `@AGENTS.md` pointer is obsolete now that Claude Code reads `AGENTS.md` natively, and it was recorded in every generated project's `.folio.yaml` manifest. The manifest code itself is generic; the file came from the preset template `presets/go-baseline/files/CLAUDE.md.tmpl`, now deleted along with its assertions in the integration tests. Existing projects keep a stale `CLAUDE.md` entry in `.folio.yaml` until removed by hand.
+
 ## [0.7.0] — 2026-09-30
 
 ### Changed

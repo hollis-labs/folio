@@ -58,7 +58,6 @@ func TestGoServiceApp_RendersTree(t *testing.T) {
 		".golangci.yml",
 		"AGENTS.md",
 		"CHANGELOG.md",
-		"CLAUDE.md",
 		"LICENSE",
 		"cmd/my-service/main.go",
 		"docs/transport-boundary.md",
