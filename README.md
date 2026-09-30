@@ -56,7 +56,8 @@ for everything required.
 | `folio preset validate <preset-dir>` | Run the v0 validation rule set against `<preset-dir>/preset.yaml`. |
 | `folio preset list [--json]` | List every bundled and user-dir preset (`~/.folio/presets/local/<id>@<version>/`) with its version, source and description. |
 | `folio preset show <id> [--json]` | Show one preset's metadata, its own declared `composes:` entries (not a resolved chain) and its inputs. Exits 1 if the id is unknown. |
-| `folio sync` / `folio inspect` | Reserved — print "not yet implemented in v0" and exit 1. |
+| `folio inspect <dir> [--json]` | Read-only drift report: re-render the preset recorded in `<dir>/.folio.yaml` with the recorded inputs and compare it, per file, with the project (`unchanged`, `preset_updated`, `locally_modified`, `conflict`, `added_upstream`, `removed_upstream`, `missing_locally`). Never writes; exits 0 whenever it can report (1 if `<dir>` has no `.folio.yaml` or the preset no longer accepts the recorded inputs). Replays the generation clock and folio version from the manifest, so a `LICENSE` reading `{{ .now.Year }}` does not drift when the year turns; a file that renders random bytes (`uuid`) is marked `*` and compared for local edits only. |
+| `folio sync` | Reserved — prints "not yet implemented in v0" and exits 1. A real sync needs the original rendered bytes for a three-way merge; `.folio.yaml` stores only digests. |
 
 ## Composing presets
 

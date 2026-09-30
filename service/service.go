@@ -177,22 +177,9 @@ func (s *Service) New(opts NewOptions) (NewResult, error) {
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	rendered := map[string]renderedFile{}
-	orderedPaths := []string{}
-	for _, l := range layers {
-		tree, err := s.renderTree(
-			&LoadedPreset{Preset: l.Preset, FS: l.FS},
-			l.Ctx,
-		)
-		if err != nil {
-			return NewResult{}, err
-		}
-		for _, f := range tree.Files {
-			if _, exists := rendered[f.RelPath]; !exists {
-				orderedPaths = append(orderedPaths, f.RelPath)
-			}
-			rendered[f.RelPath] = renderedFile{File: f, PresetID: l.Preset.ID}
-		}
+	rendered, orderedPaths, err := s.renderAllLayers(layers)
+	if err != nil {
+		return NewResult{}, err
 	}
 
 	// The engine's Apply creates the target itself (atomically, via a staged
@@ -328,22 +315,9 @@ func (s *Service) Plan(opts NewOptions) (PlanResult, error) {
 	}
 	warnings = append(warnings, composeWarnings...)
 
-	rendered := map[string]renderedFile{}
-	orderedPaths := []string{}
-	for _, l := range layers {
-		tree, err := s.renderTree(
-			&LoadedPreset{Preset: l.Preset, FS: l.FS},
-			l.Ctx,
-		)
-		if err != nil {
-			return PlanResult{}, err
-		}
-		for _, f := range tree.Files {
-			if _, exists := rendered[f.RelPath]; !exists {
-				orderedPaths = append(orderedPaths, f.RelPath)
-			}
-			rendered[f.RelPath] = renderedFile{File: f, PresetID: l.Preset.ID}
-		}
+	rendered, orderedPaths, err := s.renderAllLayers(layers)
+	if err != nil {
+		return PlanResult{}, err
 	}
 
 	var files []PlanFile
@@ -502,6 +476,15 @@ func (s *Service) findUserPreset(id string, constraint *compose.Constraint) (str
 // caller-side `.inputs.*` perspective used by compose.ScopeVarsForLayer
 // when overriding per-key for inner layers). ctx.Computed is empty.
 func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context, []string, error) {
+	return s.prepareRenderAt(opts, s.now(), s.folioVersion)
+}
+
+// prepareRenderAt is prepareRender with the render's frozen clock and the
+// folio version templates see supplied by the caller. Inspect uses it to
+// replay the values recorded in .folio.yaml, so a template that reads .now or
+// .folio.version reproduces what was generated instead of reporting drift for
+// the passage of time or a newer folio binary.
+func (s *Service) prepareRenderAt(opts NewOptions, now time.Time, folioVersion string) (*LoadedPreset, render.Context, []string, error) {
 	if opts.TargetDir == "" {
 		return nil, render.Context{}, nil, newErr(ErrInputInvalid, "target directory is required", nil)
 	}
@@ -515,14 +498,12 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 		return nil, render.Context{}, nil, err
 	}
 
-	now := s.now()
-
 	ctx := render.Context{
 		Inputs:   opts.Inputs,
 		Computed: map[string]any{},
 		Target:   abs,
 		Preset:   render.PresetInfo{ID: loaded.Preset.ID, Version: loaded.Preset.Version},
-		Folio:    render.FolioInfo{Version: s.folioVersion},
+		Folio:    render.FolioInfo{Version: folioVersion},
 		Now:      now,
 	}
 
@@ -532,6 +513,30 @@ func (s *Service) prepareRender(opts NewOptions) (*LoadedPreset, render.Context,
 	}
 
 	return loaded, ctx, warnings, nil
+}
+
+// renderAllLayers renders every layer in apply order and merges the trees
+// last-writer-wins by path. orderedPaths lists each path at its first
+// appearance. New, Plan and Inspect share it.
+func (s *Service) renderAllLayers(layers []layer) (map[string]renderedFile, []string, error) {
+	rendered := map[string]renderedFile{}
+	orderedPaths := []string{}
+	for _, l := range layers {
+		tree, err := s.renderTree(
+			&LoadedPreset{Preset: l.Preset, FS: l.FS},
+			l.Ctx,
+		)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, f := range tree.Files {
+			if _, exists := rendered[f.RelPath]; !exists {
+				orderedPaths = append(orderedPaths, f.RelPath)
+			}
+			rendered[f.RelPath] = renderedFile{File: f, PresetID: l.Preset.ID}
+		}
+	}
+	return rendered, orderedPaths, nil
 }
 
 // renderTree builds the files-rooted sub-FS and delegates to render.RenderTree.

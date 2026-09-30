@@ -22,6 +22,14 @@ const (
 	ErrTargetExists   ErrorCode = "target_exists"
 	ErrWriteFailed    ErrorCode = "write_failed"
 	ErrInternal       ErrorCode = "internal"
+
+	// Inspect: no .folio.yaml at the target, an unreadable or empty one, a
+	// tracked file that cannot be read, and a project whose recorded inputs no
+	// longer satisfy the preset it came from.
+	ErrManifestNotFound  ErrorCode = "manifest_not_found"
+	ErrManifestInvalid   ErrorCode = "manifest_invalid"
+	ErrReadFailed        ErrorCode = "read_failed"
+	ErrDriftUnverifiable ErrorCode = "drift_unverifiable"
 )
 
 // Error is the typed service error. It carries an ErrorCode plus a human
