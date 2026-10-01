@@ -27,15 +27,17 @@ the current local transcript.
 Requires Go {{ .inputs.go_version }}+ and Node.js 20+ / npm.
 
 ```sh
-make run       # Go server on :8080
+make run       # Go server on 127.0.0.1:8080
 make ui-dev    # Vite, proxying /api to the Go server
 make all       # build frontend, then the single embedded Go binary
 ```
 
 Use the Vite URL during development; the Go binary serves the built app at
 <http://localhost:8080{{ .inputs.base_path }}/>. Before the first frontend build,
-`go-webui` serves its "not built" placeholder. Set `LISTEN_ADDR` to override the
-Go listener (for example `127.0.0.1:8081`).
+`go-webui` serves its "not built" placeholder. The Go listener defaults to
+`127.0.0.1:8080`. For containers, set `LISTEN_ADDR=0.0.0.0:8080` explicitly to
+listen on all interfaces. Set `LISTEN_ADDR` to choose another address or port;
+if changing the development port, update Vite's API proxy to match.
 
 ## Styling and package versions
 
