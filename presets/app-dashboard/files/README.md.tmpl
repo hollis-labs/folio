@@ -73,6 +73,10 @@ for the `PageHeader` / `DataTable` / `SummaryCards` composition pattern.
 
 ## Dependencies
 
+The design-kit version input defaults to 0.2.0, generating `^0.2.0` ranges.
+Tailwind v4 is declared explicitly to satisfy the styled packages' required peer.
+Existing generated apps keep their dependencies until intentionally updated.
+
 - **design-kit** (`^{{ .inputs.design_kit_version }}` from npm) — `design-tokens`,
   `design-components` (including AppShell), `design-app-runtime` (API client/context
   and shell reset), and `kit-dashboard` (nav, header, summary and theme).
