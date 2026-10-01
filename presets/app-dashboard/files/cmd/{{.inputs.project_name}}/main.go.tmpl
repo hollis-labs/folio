@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
 	"{{ .computed.module_path }}/internal/webui"
 )
 
 func main() {
-	const addr = ":8080"
+	addr := listenAddr()
 
 	mux := http.NewServeMux()
 
@@ -24,8 +25,15 @@ func main() {
 	// The dashboard UI — served from the embedded frontend build by go-webui.
 	webui.Mount(mux)
 
-	log.Printf("{{ .computed.app_title }} listening on http://localhost%s{{ .inputs.base_path }}/", addr)
+	log.Printf("{{ .computed.app_title }} listening on %s; UI at {{ .inputs.base_path }}/", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func listenAddr() string {
+	if addr := os.Getenv("LISTEN_ADDR"); addr != "" {
+		return addr
+	}
+	return "127.0.0.1:8080"
 }

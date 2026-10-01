@@ -1,6 +1,9 @@
 package folio_test
 
 import (
+	"bytes"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -205,13 +208,70 @@ func TestIntegration_AppDashboardPreset_Frontend(t *testing.T) {
 			t.Logf("npm %v:\n%s", args, output)
 		}
 	}
-	for _, args := range [][]string{{"mod", "tidy"}, {"build", "./..."}} {
+	// Exercise address selection in the generated package, rather than checking
+	// template text. Explicit exposure is opt-in; empty/unset values stay local.
+	addressTest := `package main
+import "testing"
+func TestListenAddr(t *testing.T) {
+ for _, tc := range []struct{ env, want string }{
+  {"", "127.0.0.1:8080"},
+  {"127.0.0.1:8081", "127.0.0.1:8081"},
+  {"0.0.0.0:8080", "0.0.0.0:8080"},
+ } {
+  t.Run(tc.env, func(t *testing.T) {
+   t.Setenv("LISTEN_ADDR", tc.env)
+   if got := listenAddr(); got != tc.want { t.Fatalf("listenAddr() = %q, want %q", got, tc.want) }
+  })
+ }
+}
+`
+	if err := os.WriteFile(filepath.Join(target, "cmd/smoke_dashboard/main_test.go"), []byte(addressTest), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(target, "dashboard-server")
+	for _, args := range [][]string{{"mod", "tidy"}, {"test", "./cmd/smoke_dashboard"}, {"build", "-o", binary, "./cmd/smoke_dashboard"}} {
 		cmd := exec.Command("go", args...)
 		cmd.Dir = target
 		cmd.Env = append(os.Environ(), "HOME="+probeHome, "GOFLAGS="+strings.TrimSpace(os.Getenv("GOFLAGS")+" -modcacherw"))
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("go %v: %v\n%s", args, err, output)
 		}
+	}
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := listener.Addr().String()
+	if closeErr := listener.Close(); closeErr != nil {
+		t.Fatal(closeErr)
+	}
+	server := exec.Command(binary)
+	server.Env = append(os.Environ(), "HOME="+probeHome, "LISTEN_ADDR="+addr)
+	var serverLog bytes.Buffer
+	server.Stdout, server.Stderr = &serverLog, &serverLog
+	if startErr := server.Start(); startErr != nil {
+		t.Fatal(startErr)
+	}
+	defer func() {
+		_ = server.Process.Kill()
+		_ = server.Wait()
+		t.Logf("generated server:\n%s", serverLog.String())
+	}()
+	client := &http.Client{Timeout: time.Second}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		response, requestErr := client.Get("http://" + addr + "/api/health")
+		if requestErr == nil {
+			_ = response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				t.Fatalf("health status = %d", response.StatusCode)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("generated server did not serve on LISTEN_ADDR: %v", requestErr)
+		}
+		time.Sleep(25 * time.Millisecond)
 	}
 }
 

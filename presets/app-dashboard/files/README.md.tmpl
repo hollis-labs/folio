@@ -31,8 +31,8 @@ embeds — so a single binary serves both the API and the UI.
 Two processes during development:
 
 ```sh
-make run      # Go server on :8080 (serves /api and the last UI build)
-make ui-dev   # Vite dev server with hot reload — proxies /api to :8080
+make run      # Go server on 127.0.0.1:8080 (serves /api and the last UI build)
+make ui-dev   # Vite dev server with hot reload — proxies /api to 127.0.0.1:8080
 ```
 
 Open the Vite dev server URL — the app is served under
@@ -47,7 +47,10 @@ make all      # ui-build (vite → internal/webui/dist) then build
 
 The dashboard UI is then served at <http://localhost:8080{{ .inputs.base_path }}/>.
 Before the first `make ui-build`, `go-webui` serves a "not built"
-placeholder in place of the app.
+placeholder in place of the app. The server defaults to `127.0.0.1:8080`.
+For containers, set `LISTEN_ADDR=0.0.0.0:8080` explicitly to listen on all
+interfaces. Set `LISTEN_ADDR` to choose another address or port; if the port
+changes, update the development proxy in `frontend/vite.config.ts` too.
 
 | Command | What it does |
 |---|---|

@@ -13,9 +13,9 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    // `make ui-dev` proxies same-origin /api calls to `make run` on :8080.
+    // `make ui-dev` proxies same-origin /api calls to `make run` on 127.0.0.1:8080.
     proxy: {
-      "/api": "http://localhost:8080",
+      "/api": "http://127.0.0.1:8080",
     },
   },
 })

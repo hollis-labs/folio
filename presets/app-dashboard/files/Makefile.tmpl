@@ -9,7 +9,7 @@ ui-build:
 	cd frontend && npm install && npm run build
 
 # Run the dashboard UI dev server with hot reload. Proxies /api to the Go
-# server on :8080 — run `make run` in another shell. The dev UI is served
+# server on 127.0.0.1:8080 — run `make run` in another shell. The dev UI is served
 # under {{ .inputs.base_path }}/ (see `base` in frontend/vite.config.ts).
 ui-dev:
 	cd frontend && npm install && npm run dev

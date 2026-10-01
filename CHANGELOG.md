@@ -20,6 +20,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- New `app-dashboard` scaffolds (including the `sysop-ui` alias) bind to
+  `127.0.0.1:8080` by default, matching `chat-app`. `LISTEN_ADDR` can override
+  the address and port; container exposure requires an explicit override.
+  The development proxy uses the same loopback address. Existing generated
+  projects are not rewritten.
+
 - **`app-dashboard` 2.0.0 replaces the `sysop-ui` template.** It scaffolds onto
   published design-kit packages and kit-dashboard (`design_kit_version=0.1.0`),
   adopts AppShell and the runtime API/context, and imports the kit theme plus
