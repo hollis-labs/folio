@@ -1,0 +1,81 @@
+# {{ .computed.app_title }}
+{{ if .inputs.description }}
+{{ .inputs.description }}
+{{ end }}
+A chat-first React app on published design-kit and `kit-chat`, served by a Go
+binary through `go-webui`. Scaffolded by `folio new chat-app`.
+
+## Layout
+
+```text
+cmd/{{ .inputs.project_name }}/   Go server: /api/health and /api/messages
+internal/webui/                 embedded frontend build + go-webui handler
+frontend/src/App.tsx            AppShell, conversation sidebar, header
+frontend/src/pages/chat.tsx     host-owned draft/transcript + ChatStream/ChatInput
+frontend/src/api/               same-origin runtime client and typed context
+```
+
+`ChatStream` fills the remaining height above a bordered `ChatInput`, following
+ops-chat's composition. The app owns draft, messages, request state and reset.
+The starter `/api/messages` endpoint returns a local echo; it has no agent-service
+dependency, credentials, streaming transport or persistent conversation storage.
+Replace that endpoint/client with your own transport. "New conversation" resets
+the current local transcript.
+
+## Develop and build
+
+Requires Go {{ .inputs.go_version }}+ and Node.js 20+ / npm.
+
+```sh
+make run       # Go server on :8080
+make ui-dev    # Vite, proxying /api to the Go server
+make all       # build frontend, then the single embedded Go binary
+```
+
+Use the Vite URL during development; the Go binary serves the built app at
+<http://localhost:8080{{ .inputs.base_path }}/>. Before the first frontend build,
+`go-webui` serves its "not built" placeholder. Set `LISTEN_ADDR` to override the
+Go listener (for example `127.0.0.1:8081`).
+
+## Styling and package versions
+
+`design_kit_version={{ .inputs.design_kit_version }}` supplies the published
+foundation, kit-chat and design ESLint package versions. Its default targets
+**0.1.x**; `^0.1.0` does not include 0.2.0. The next kit-chat/kit-dashboard minor
+requires a deliberate Folio default bump; the merged kit-chat polish fixes arrive
+with that release. Registry 0.1.0 can emit the control-font utility while the
+message bubble computes 16px and the desktop composer 14px (rather than the 13px
+control token); the browser check reports this known typography mismatch. Do not
+assume an unreleased source fix is in a registry build.
+
+The CSS imports Tailwind v4, the token theme, base component source registration,
+**kit-chat/source.css**, and the runtime shell reset. Keep the kit-chat source
+import: Tailwind does not scan package class strings automatically, and a green
+build can still render an unstyled transcript. The starter selects token theme
+`dir-a` in dark mode. It uses plain message content; the optional markdown lane
+and streamdown are not installed.
+
+The TypeScript config allows `.ts` import extensions under `noEmit`, as required
+by the published design-bindings source reached through kit-chat.
+
+Runtime transport comes from `design-app-runtime`, AppShell/base controls from
+`design-components`, and transcript/composer from `kit-chat`. App code names
+contract tokens rather than raw color or scale values.
+
+## Checks
+
+```sh
+cd frontend
+npm install
+npm run typecheck
+npm run lint    # Biome + the design-token ESLint config
+npm run build
+```
+
+Generated CI runs these checks before Go vet/build/test so the server embeds a
+real UI. `make test` and `make vet` check the Go app. See Folio's opt-in consumer
+verification for a real headless-browser check of emitted styles and message send.
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

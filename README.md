@@ -218,6 +218,51 @@ This installs the frontend dependencies, typechecks, runs Biome and the design
 ESLint gate, builds the embedded UI and compiles the generated Go application.
 All generated output and tool homes are temporary.
 
+## Chat apps
+
+```sh
+folio new chat-app /tmp/my-chat --input project_name=my_chat --non-interactive
+```
+
+The preset follows ops-chat's AppShell/sidebar and transcript/composer layout,
+using published design-kit and kit-chat with explicit Tailwind source registration.
+Its Go server provides a same-origin local echo endpoint so sending a message
+works immediately; replace the endpoint/client with your application's transport.
+Draft and transcript are app-owned, ephemeral state. No Nanite dependency,
+credentials, persistence or optional markdown renderer is included.
+
+`design_kit_version` is the single design-kit version input, defaulting to 0.1.0.
+The generated `^0.1.0` ranges target 0.1.x and exclude 0.2.0. The next kit minor
+requires a deliberate default bump; merged kit-chat polish fixes arrive then.
+
+The normal preset/discovery tests stay offline. To install published packages,
+typecheck, lint, build the UI and compile the generated Go server:
+
+```sh
+FOLIO_FRONTEND_E2E=1 go test . -run TestIntegration_ChatAppPreset_Frontend -v
+```
+
+For computed-style and interaction verification against the actual embedded app,
+install Playwright in a scratch tool directory and provide its module/browser:
+
+```sh
+npm install --prefix /path/to/browser-tools playwright
+/path/to/browser-tools/node_modules/.bin/playwright install chromium
+FOLIO_FRONTEND_E2E=1 FOLIO_BROWSER_E2E=1 \
+  FOLIO_PLAYWRIGHT_MODULE=/path/to/browser-tools/node_modules/playwright \
+  go test . -run TestIntegration_ChatAppPreset_Frontend -v
+```
+
+`FOLIO_CHROMIUM_EXECUTABLE` optionally selects an existing Chromium executable.
+`FOLIO_SCREENSHOT_DIR` optionally saves desktop/narrow screenshots. The browser
+check verifies user-row alignment, token radius, bubble background/width,
+composer border/radius, scroll layout, emitted chat utilities, message send and
+reset, with no page errors. It logs actual bubble/composer typography and flags
+control-token mismatches separately: registry 0.1.0 has the known font-merge defect
+recorded in kit-chat's consumer-verification notes. This check does not claim the
+unreleased typography fix is already in the registry. The Go app runs on a temporary loopback
+port and tool homes/output are temporary.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
