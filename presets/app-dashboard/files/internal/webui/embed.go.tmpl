@@ -1,4 +1,4 @@
-// Package webui embeds the built Sysop UI frontend and serves it through
+// Package webui embeds the built dashboard UI frontend and serves it through
 // the shared go-webui harness.
 package webui
 
@@ -10,7 +10,7 @@ import (
 	gowebui "github.com/hollis-labs/go-webui"
 )
 
-// BasePath is the URL prefix the Sysop UI is mounted at. Keep it in sync
+// BasePath is the URL prefix the dashboard UI is mounted at. Keep it in sync
 // with `base` in frontend/vite.config.ts.
 const BasePath = "{{ .inputs.base_path }}"
 
@@ -21,7 +21,7 @@ const BasePath = "{{ .inputs.base_path }}"
 //go:embed all:dist
 var embedded embed.FS
 
-// Handler returns the http.Handler serving the embedded Sysop UI.
+// Handler returns the http.Handler serving the embedded dashboard UI.
 func Handler() http.Handler {
 	dist, err := fs.Sub(embedded, "dist")
 	if err != nil {
@@ -30,7 +30,7 @@ func Handler() http.Handler {
 	return gowebui.Handler(gowebui.Config{FS: dist, BasePath: BasePath})
 }
 
-// Mount registers the Sysop UI handler on mux at BasePath. Both the
+// Mount registers the dashboard UI handler on mux at BasePath. Both the
 // trailing-slash and bare patterns are registered so {{ .inputs.base_path }}
 // and {{ .inputs.base_path }}/ both resolve.
 func Mount(mux *http.ServeMux) {

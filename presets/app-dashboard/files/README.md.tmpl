@@ -2,18 +2,18 @@
 {{ if .inputs.description }}
 {{ .inputs.description }}
 {{ end }}
-A **Sysop UI** application: a React frontend built on
-[`@hollis-labs/sysop-ui`](https://github.com/hollis-labs/sysop-ui) served by a
+A **dashboard** application: a React frontend built on
+[`design-kit`](https://github.com/hollis-labs/design-kit) and `kit-dashboard` served by a
 Go binary through the [`go-webui`](https://github.com/hollis-labs/go-webui)
-embed harness. Scaffolded by `folio new sysop-ui`.
+embed harness. Scaffolded by `folio new app-dashboard`.
 
 ## Layout
 
 ```
 cmd/{{ .inputs.project_name }}/   Go entrypoint — HTTP server + /api
 internal/webui/             //go:embed all:dist + the go-webui handler
-frontend/                   Vite + React frontend (the Sysop UI)
-  src/App.tsx               app shell — nav rail + page header
+frontend/                   Vite + React frontend (the dashboard UI)
+  src/App.tsx               AppShell — nav rail + page header
   src/pages/                one page per screen
   src/api/                  same-origin API client + typed context
 ```
@@ -45,7 +45,7 @@ make all      # ui-build (vite → internal/webui/dist) then build
 ./{{ .inputs.project_name }}
 ```
 
-The Sysop UI is then served at <http://localhost:8080{{ .inputs.base_path }}/>.
+The dashboard UI is then served at <http://localhost:8080{{ .inputs.base_path }}/>.
 Before the first `make ui-build`, `go-webui` serves a "not built"
 placeholder in place of the app.
 
@@ -65,15 +65,20 @@ A page is generic kit chrome plus app-specific content. Add a component
 under `frontend/src/pages/`, then wire it into `frontend/src/App.tsx`
 (extend the `nav` array and the active-route switch). Add API endpoints
 to `frontend/src/api/client.ts`. See the
-[`@hollis-labs/sysop-ui` README](https://github.com/hollis-labs/sysop-ui)
+[`kit-dashboard` README](https://github.com/hollis-labs/design-kit/tree/main/packages/kit-dashboard)
 for the `PageHeader` / `DataTable` / `SummaryCards` composition pattern.
 
 ## Dependencies
 
-- **`@hollis-labs/sysop-ui`** (`{{ .inputs.sysop_ui_version }}`) — the React
-  kit + canonical theme. Consumed as a git dependency, pinned to a release
-  tag. For local kit development, link a working copy:
-  `npm install file:<path-to>/libs/sysop-ui` from `frontend/`.
+- **design-kit** (`^{{ .inputs.design_kit_version }}` from npm) — `design-tokens`,
+  `design-components` (including AppShell), `design-app-runtime` (API client/context
+  and shell reset), and `kit-dashboard` (nav, header, summary and theme).
+- **`@hollis-labs/eslint-config-design`** (`^{{ .inputs.design_kit_version }}`) —
+  the token contract gate. `npm run lint` runs Biome and this ESLint lane; CI
+  typechecks, lints and builds the frontend before compiling the embedded server.
+  Components name tokens, never raw colors or scale values. Import base controls
+  from `design-components`, app transport from `design-app-runtime`, dashboard
+  layout/table/chart surfaces from the matching `kit-dashboard` subpath.
 - **`github.com/hollis-labs/go-webui`** (`{{ .inputs.go_webui_version }}`) —
   the SPA-serving harness.
 

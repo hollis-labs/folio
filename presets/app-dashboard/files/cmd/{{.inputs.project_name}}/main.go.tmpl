@@ -1,4 +1,4 @@
-// Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} Sysop UI.
+// Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} dashboard UI.
 package main
 
 import (
@@ -21,7 +21,7 @@ func main() {
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
-	// The Sysop UI — served from the embedded frontend build by go-webui.
+	// The dashboard UI — served from the embedded frontend build by go-webui.
 	webui.Mount(mux)
 
 	log.Printf("{{ .computed.app_title }} listening on http://localhost%s{{ .inputs.base_path }}/", addr)

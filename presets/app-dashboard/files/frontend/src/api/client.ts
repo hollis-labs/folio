@@ -1,4 +1,4 @@
-import { createApiClient } from "@hollis-labs/sysop-ui"
+import { createApiClient } from "@hollis-labs/design-app-runtime"
 
 // Same-origin: the Go binary serves both this SPA and the API, so an empty
 // baseUrl resolves every request against the current origin.

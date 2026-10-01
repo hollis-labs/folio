@@ -1,4 +1,5 @@
-import { EmptyState, SummaryCards } from "@hollis-labs/sysop-ui"
+import { EmptyState } from "@hollis-labs/design-components"
+import { SummaryCards } from "@hollis-labs/kit-dashboard"
 import { useEffect, useState } from "react"
 import type { HealthInfo } from "../api/client"
 import { useApi } from "../api/context"
@@ -6,7 +7,7 @@ import { useApi } from "../api/context"
 /**
  * Starter page — polls the same-origin /api/health endpoint and shows the
  * result in the kit's SummaryCards strip. Replace this with real content;
- * see the @hollis-labs/sysop-ui README for the page-composition pattern.
+ * see the @hollis-labs/kit-dashboard README for the page-composition pattern.
  */
 export function DashboardPage() {
   const api = useApi()

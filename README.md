@@ -10,7 +10,7 @@ re-rendered later (and, in a future release, synced when the preset evolves).
 ## Status
 
 v0.3 — composition slice. Folio ships several bundled presets (Go modules,
-libraries and service apps, a Nanite plugin, a Sysop UI app) plus one
+libraries and service apps, a Nanite plugin, a design-kit dashboard app) plus one
 compose-only layer, `go-baseline`, that is not meant to be rendered on its own.
 Ask folio rather than this README which presets exist:
 
@@ -178,6 +178,45 @@ preset `go_version` defaults, rendered workflow templates, folio's own CI, the
 conformance script's floor, or (with `--checklist FILE`) the ratified lib
 checklist — disagrees with the manifest. `--self-test` breaks one value at a time
 in a scratch copy and requires exactly that check to fail.
+
+## Dashboard apps and the former sysop-ui preset
+
+```sh
+folio new app-dashboard /tmp/my-dashboard \
+  --input project_name=my_dashboard \
+  --input github_owner=hollis-labs \
+  --non-interactive
+```
+
+`app-dashboard` renders the design-kit foundation plus kit-dashboard, with
+published npm packages (`design_kit_version`, default `0.1.0`). The generated
+frontend uses the real `AppShell`, same-origin API client/context, the kit theme
+and shell reset; its CI runs frontend typecheck, Biome/design-token lint and
+build before the Go checks. The manifest-driven admin shell is deferred.
+
+`sysop-ui` remains a deprecated bundled alias: `new`, `plan`, `preset show` and
+`inspect` resolve it to `app-dashboard`. Discovery lists the canonical preset
+once, and new breadcrumbs record `app-dashboard`. Existing breadcrumbs with
+`sysop-ui` remain readable by `inspect`, which reports drift against the current
+dashboard template without updating the app or its breadcrumb. The old
+`sysop_ui_version` input is ignored with an undeclared-input warning; it cannot
+pin the frozen kit anymore. Choose `design_kit_version` for new scaffolds.
+There are no bundled `composes:` references to the old id.
+
+For an existing app, render the new preset into a temporary directory and port
+its imports, dependencies and CI intentionally. `folio sync` remains reserved;
+this rename performs no automatic migration of existing apps.
+
+The structural preset tests run offline. To verify a fresh generated consumer
+against the published packages (requires npm/network), run:
+
+```sh
+FOLIO_FRONTEND_E2E=1 go test . -run TestIntegration_AppDashboardPreset_Frontend -v
+```
+
+This installs the frontend dependencies, typechecks, runs Biome and the design
+ESLint gate, builds the embedded UI and compiles the generated Go application.
+All generated output and tool homes are temporary.
 
 ## License
 

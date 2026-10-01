@@ -364,6 +364,14 @@ func (s *Service) LoadPreset(id string) (*LoadedPreset, error) {
 	}
 	if s.bundledFS != nil {
 		sub := pathJoin(s.bundledRoot, id)
+		// Preserve old CLI calls and inspect of existing sysop-ui breadcrumbs.
+		// New renders record the canonical app-dashboard id; no second tree ships.
+		if id == "sysop-ui" {
+			canonical := pathJoin(s.bundledRoot, "app-dashboard")
+			if entry, err := fs.Stat(s.bundledFS, canonical); err == nil && entry.IsDir() {
+				sub = canonical
+			}
+		}
 		if entry, err := fs.Stat(s.bundledFS, sub); err == nil && entry.IsDir() {
 			lp, err := s.loadFromSubFS(s.bundledFS, sub, "bundled", "bundled:"+sub)
 			if err != nil {
@@ -508,6 +516,9 @@ func (s *Service) prepareRenderAt(opts NewOptions, now time.Time, folioVersion s
 	}
 
 	var warnings []string
+	if opts.PresetID == "sysop-ui" && loaded.Preset.ID == "app-dashboard" {
+		warnings = append(warnings, "preset sysop-ui is deprecated; using app-dashboard")
+	}
 	if loaded.Preset.PostRender != nil && loaded.Preset.PostRender.Blueprint != "" {
 		warnings = append(warnings, "post_render is not implemented in v0; the hook will be skipped at generation time")
 	}

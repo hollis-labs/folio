@@ -2,6 +2,7 @@ package folio_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,17 +13,14 @@ import (
 	"github.com/hollis-labs/folio/service"
 )
 
-// TestIntegration_SysopUIPreset_Defaults renders the sysop-ui preset with
+// TestIntegration_AppDashboardPreset_Defaults renders the app-dashboard preset with
 // default inputs and asserts the scaffold's shape: the Go module + serving
 // package, the frontend tree, and the wiring that ties them together.
 //
-// Unlike the base preset's test it does not run `go build` / `npm build`:
-// the scaffold depends on github.com/hollis-labs/go-webui and
-// @hollis-labs/sysop-ui, which are not resolvable in an offline test
-// sandbox. This mirrors the nanite-plugin preset test, which likewise
-// asserts structure for a scaffold carrying an external hollis-labs dep.
-func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
-	target := filepath.Join(t.TempDir(), "sysop-app")
+// Structural rendering remains offline; the opt-in frontend integration below
+// installs the published packages and exercises their actual export/build surface.
+func TestIntegration_AppDashboardPreset_Defaults(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "dashboard-app")
 
 	svc := service.New(service.Options{
 		BundledFS:    folio.BundledPresets,
@@ -33,7 +31,7 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 	})
 
 	_, err := svc.New(service.NewOptions{
-		PresetID:  "sysop-ui",
+		PresetID:  "app-dashboard",
 		TargetDir: target,
 		Inputs: map[string]any{
 			"project_name": "acme_sysop",
@@ -59,6 +57,7 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 		"frontend/index.html",
 		"frontend/package.json",
 		"frontend/tsconfig.json",
+		"frontend/eslint.config.js",
 		"frontend/vite.config.ts",
 		"frontend/src/main.tsx",
 		"frontend/src/App.tsx",
@@ -99,10 +98,12 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 		t.Errorf("main.go does not mount the webui handler:\n%s", mainGo)
 	}
 
-	// package.json — the sysop-ui kit as a pinned git dependency.
+	// package.json — published design-kit packages rather than a git-tag kit.
 	pkg := readFile(t, target, "frontend/package.json")
-	if !strings.Contains(pkg, `"@hollis-labs/sysop-ui": "github:hollis-labs/sysop-ui#v0.4.0"`) {
-		t.Errorf("frontend/package.json missing pinned sysop-ui git dependency:\n%s", pkg)
+	for _, name := range []string{"design-tokens", "design-components", "design-app-runtime", "kit-dashboard", "eslint-config-design"} {
+		if !strings.Contains(pkg, `"@hollis-labs/`+name+`": "^0.1.0"`) {
+			t.Errorf("frontend/package.json missing published %s dependency:\n%s", name, pkg)
+		}
 	}
 
 	// vite.config.ts — base path + the build output aimed at the Go embed dir.
@@ -122,23 +123,23 @@ func TestIntegration_SysopUIPreset_Defaults(t *testing.T) {
 		}
 	}
 
-	// Manifest records the sysop-ui preset.
+	// Manifest records the app-dashboard preset.
 	mf, err := manifest.Read(target)
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
-	if len(mf.Presets) != 1 || mf.Presets[0].ID != "sysop-ui" {
-		t.Errorf("manifest presets = %+v, want single sysop-ui entry", mf.Presets)
+	if len(mf.Presets) != 1 || mf.Presets[0].ID != "app-dashboard" {
+		t.Errorf("manifest presets = %+v, want single app-dashboard entry", mf.Presets)
 	}
 	if mf.Computed["app_title"] != "AcmeSysop" {
 		t.Errorf("manifest computed.app_title = %v, want AcmeSysop", mf.Computed["app_title"])
 	}
 }
 
-// TestIntegration_SysopUIPreset_CustomBasePath verifies a non-default
+// TestIntegration_AppDashboardPreset_CustomBasePath verifies a non-default
 // base_path threads through every place it is consumed — the Go serving
 // constant and the Vite base.
-func TestIntegration_SysopUIPreset_CustomBasePath(t *testing.T) {
+func TestIntegration_AppDashboardPreset_CustomBasePath(t *testing.T) {
 	target := filepath.Join(t.TempDir(), "ops-app")
 
 	svc := service.New(service.Options{
@@ -150,7 +151,7 @@ func TestIntegration_SysopUIPreset_CustomBasePath(t *testing.T) {
 	})
 
 	_, err := svc.New(service.NewOptions{
-		PresetID:  "sysop-ui",
+		PresetID:  "app-dashboard",
 		TargetDir: target,
 		Inputs: map[string]any{
 			"project_name": "ops_console",
@@ -177,4 +178,67 @@ func readFile(t *testing.T, dir, rel string) string {
 		t.Fatalf("read %s: %v", rel, err)
 	}
 	return string(raw)
+}
+
+// TestIntegration_AppDashboardPreset_Frontend checks a real consumer of the
+// published packages, without making the offline Go suite require npm/network.
+func TestIntegration_AppDashboardPreset_Frontend(t *testing.T) {
+	if os.Getenv("FOLIO_FRONTEND_E2E") != "1" {
+		t.Skip("set FOLIO_FRONTEND_E2E=1 to build and lint the generated frontend")
+	}
+	target := filepath.Join(t.TempDir(), "dashboard")
+	svc := service.New(service.Options{BundledFS: folio.BundledPresets, BundledRoot: "presets", UserDir: t.TempDir(), FolioVersion: folio.Version})
+	if _, err := svc.New(service.NewOptions{
+		PresetID: "app-dashboard", TargetDir: target,
+		Inputs: map[string]any{"project_name": "smoke_dashboard", "github_owner": "hollis-labs"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	probeHome := t.TempDir()
+	for _, args := range [][]string{{"install"}, {"run", "typecheck"}, {"run", "lint"}, {"run", "build"}} {
+		cmd := exec.Command("npm", args...)
+		cmd.Dir = filepath.Join(target, "frontend")
+		cmd.Env = append(os.Environ(), "HOME="+probeHome)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("npm %v: %v\n%s", args, err, output)
+		} else {
+			t.Logf("npm %v:\n%s", args, output)
+		}
+	}
+	for _, args := range [][]string{{"mod", "tidy"}, {"build", "./..."}} {
+		cmd := exec.Command("go", args...)
+		cmd.Dir = target
+		cmd.Env = append(os.Environ(), "HOME="+probeHome, "GOFLAGS="+strings.TrimSpace(os.Getenv("GOFLAGS")+" -modcacherw"))
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("go %v: %v\n%s", args, err, output)
+		}
+	}
+}
+
+func TestIntegration_AppDashboardPreset_LegacyAlias(t *testing.T) {
+	svc := service.New(service.Options{BundledFS: folio.BundledPresets, BundledRoot: "presets", UserDir: t.TempDir(), FolioVersion: folio.Version})
+	target := filepath.Join(t.TempDir(), "legacy")
+	if _, err := svc.New(service.NewOptions{
+		PresetID: "sysop-ui", TargetDir: target,
+		Inputs: map[string]any{"project_name": "legacy_dashboard", "github_owner": "hollis-labs", "sysop_ui_version": "v0.4.0"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	mf, err := manifest.Read(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mf.Presets[0].ID != "app-dashboard" {
+		t.Fatalf("alias did not record canonical preset: %+v", mf.Presets)
+	}
+	// Simulate an existing breadcrumb, whose id predates the preset rename.
+	mf.Presets[0].ID = "sysop-ui"
+	mf.Presets[0].Version = "1.2.0"
+	mf.Inputs["sysop_ui_version"] = "v0.4.0"
+	if err := manifest.Write(target, mf); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Inspect(service.InspectOptions{TargetDir: target}); err != nil {
+		t.Fatalf("inspect of old sysop-ui breadcrumb: %v", err)
+	}
 }

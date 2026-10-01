@@ -1,11 +1,11 @@
-import { applyTheme, getInitialTheme } from "@hollis-labs/sysop-ui"
+import { applyTheme, getInitialTheme } from "@hollis-labs/kit-dashboard"
 import React from "react"
 import ReactDOM from "react-dom/client"
 import { App } from "./App"
 import { ApiProvider } from "./api/context"
 import "./index.css"
 
-// Apply the persisted Sysop UI palette before first paint.
+// Apply the persisted dashboard palette before first paint.
 applyTheme(getInitialTheme())
 
 const root = document.getElementById("root")

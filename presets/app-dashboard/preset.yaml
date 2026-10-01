@@ -1,7 +1,7 @@
 folio_version: "0.1"
-id: sysop-ui
-version: 1.2.0
-description: Sysop UI app — a libs/sysop-ui React frontend served by a Go binary via libs/go-webui
+id: app-dashboard
+version: 2.0.0
+description: Dashboard app — design-kit and kit-dashboard React frontend served by a Go binary via go-webui
 author: hollis-labs
 license: MIT
 
@@ -26,13 +26,13 @@ inputs:
   - name: base_path
     type: string
     default: /sysop
-    description: URL path the Sysop UI is mounted at — leading slash, no trailing slash (e.g. /sysop)
+    description: URL path the dashboard is mounted at — leading slash, no trailing slash (e.g. /sysop)
 
-  - name: sysop_ui_version
+  - name: design_kit_version
     type: string
-    default: v0.4.0
-    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
-    description: "@hollis-labs/sysop-ui git tag to depend on (v-prefixed semver)"
+    default: "0.1.0"
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: Published design-kit package version (npm semver, without a v prefix)
 
   - name: go_webui_version
     type: string
@@ -78,6 +78,8 @@ sync:
     - glob: "lefthook.yml"
       policy: overwrite
     - glob: ".golangci.yml"
+      policy: overwrite
+    - glob: "frontend/eslint.config.js"
       policy: overwrite
     - glob: "frontend/biome.json"
       policy: overwrite
