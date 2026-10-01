@@ -189,7 +189,7 @@ folio new app-dashboard /tmp/my-dashboard \
 ```
 
 `app-dashboard` renders the design-kit foundation plus kit-dashboard, with
-published npm packages (`design_kit_version`, default `0.1.0`). The generated
+published npm packages (`design_kit_version`, default `0.2.0`). The generated
 frontend uses the real `AppShell`, same-origin API client/context, the kit theme
 and shell reset; its CI runs frontend typecheck, Biome/design-token lint and
 build before the Go checks. The manifest-driven admin shell is deferred.
@@ -231,9 +231,10 @@ works immediately; replace the endpoint/client with your application's transport
 Draft and transcript are app-owned, ephemeral state. No Nanite dependency,
 credentials, persistence or optional markdown renderer is included.
 
-`design_kit_version` is the single design-kit version input, defaulting to 0.1.0.
-The generated `^0.1.0` ranges target 0.1.x and exclude 0.2.0. The next kit minor
-requires a deliberate default bump; merged kit-chat polish fixes arrive then.
+`design_kit_version` is the single design-kit version input, defaulting to 0.2.0.
+The generated `^0.2.0` ranges select the published 0.2.x packages, including the
+kit-chat control-font and composer fixes. Existing generated apps keep their
+dependencies until intentionally updated.
 
 The normal preset/discovery tests stay offline. To install published packages,
 typecheck, lint, build the UI and compile the generated Go server:
@@ -257,11 +258,10 @@ FOLIO_FRONTEND_E2E=1 FOLIO_BROWSER_E2E=1 \
 `FOLIO_SCREENSHOT_DIR` optionally saves desktop/narrow screenshots. The browser
 check verifies user-row alignment, token radius, bubble background/width,
 composer border/radius, scroll layout, emitted chat utilities, message send and
-reset, with no page errors. It logs actual bubble/composer typography and flags
-control-token mismatches separately: registry 0.1.0 has the known font-merge defect
-recorded in kit-chat's consumer-verification notes. This check does not claim the
-unreleased typography fix is already in the registry. The Go app runs on a temporary loopback
-port and tool homes/output are temporary.
+reset, one Send control, and bubble/composer typography matching the 13px control
+token at desktop and narrow widths, with no page errors. These fixes ship in the
+registry 0.2.0 packages. The Go app runs on a temporary loopback port and tool
+homes/output are temporary.
 
 ## License
 

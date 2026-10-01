@@ -1,5 +1,40 @@
 # Generated chat-app consumer verification
 
+## Registry 0.2.0 verification
+
+CW-20261001-0669, 2026-10-01. Both `app-dashboard` and `chat-app` now default
+`design_kit_version` to 0.2.0 and generate `^0.2.0` ranges. Fresh scaffolds
+installed from the public npm registry with an empty userconfig, then passed
+typecheck, Biome/design ESLint, Vite build and Go compile. Each `npm ls --all`
+exited 0 with one design-tokens 0.2.0, no duplicate Hollis packages and no peer
+warnings. All direct design-kit packages resolved to 0.2.0; chat's transitive
+design-bindings remains registry 0.1.0. Both presets already declare Tailwind v4.
+
+The updated browser check drove the embedded Go chat app, clicked its built-in
+Send control, received the real local echo and reset the conversation at both
+widths. Node 24.21.0, npm 11.19.0, Playwright 1.61.1 and cached Chromium build
+1243 were used. No page errors or horizontal overflow occurred.
+
+| Measured property | 1024 × 800 | 390 × 800 |
+| --- | --- | --- |
+| Send controls | 1 | 1 |
+| Bubble / composer font | 13px / 13px | 13px / 13px |
+| Composer wrapper border / radius | 1px / 10px | 1px / 10px |
+| Composer width | 768px | 358px |
+
+Composer chrome is measured on `[data-slot="chat-input"]`; the textarea supplies
+the font measurement. The browser check now requires token-matching typography
+and one Send control. Template markup already delegates Send to `ChatInput`;
+no second control was added. Folio's full `make test` also passed.
+
+Biome printed two informational notices (schema patch version and deprecated
+`recommended` field), and npm printed an ESLint deprecation notice; these did
+not fail checks and are outside this default bump. Existing generated apps are
+not rewritten. Verification covers Chromium and the local echo starter, not
+other browsers, agent backends, persistence, markdown or every card/state.
+
+## Historical registry 0.1.0 verification
+
 CW-20261001-0513, 2026-10-01. Rendered Folio's actual `chat-app` preset into a
 fresh temporary directory, installed published npm dependencies, typechecked,
 ran Biome plus design ESLint, built Vite output into the Go embed directory,
@@ -47,9 +82,10 @@ and desktop override defects described in design-kit's
 The browser JSON reports control-token mismatches separately rather than hiding
 them behind its source-emission/layout/interaction PASS.
 
-Merged kit-chat polish is not yet available from the registry. The preset targets
-0.1.x until a deliberate `design_kit_version` default bump for the next kit minor;
-`^0.1.0` excludes 0.2.0. No source workaround or unreleased package is embedded.
+At the time of this original run, merged kit-chat polish was not available from
+the registry and the preset targeted 0.1.x. Published 0.2.0 now includes the fixes,
+and CW-20261001-0669 changes the default to `^0.2.0`. The historical measurements
+and screenshots above remain evidence of 0.1.0, not the current default.
 
 ## Artifacts and reproduction
 

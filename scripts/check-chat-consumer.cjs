@@ -29,8 +29,11 @@ async function main() {
       await page.setViewportSize({ width, height: 800 })
       await page.goto(url)
       const input = page.getByLabel('Message', { exact: true })
+      await input.waitFor()
+      const send = page.getByRole('button', { name: /^Send(?: message)?$/ })
+      assert.equal(await send.count(), 1, 'ChatInput must supply exactly one Send control')
       await input.fill(`Hello at ${width}`)
-      await input.press('Enter')
+      await send.click()
       await page.getByText(`Echo: Hello at ${width}`, { exact: true }).waitFor()
       assert.equal(await input.inputValue(), '', 'submit must clear the draft')
       const sample = await page.evaluate(() => {
@@ -48,6 +51,8 @@ async function main() {
         probe.remove()
         const bubbleStyle = getComputedStyle(bubble)
         const inputStyle = getComputedStyle(input)
+        const composer = document.querySelector('[data-slot="chat-input"]')
+        const composerStyle = getComputedStyle(composer)
         const streamStyle = getComputedStyle(viewport)
         const selectors = []
         function walk(rules) {
@@ -62,8 +67,8 @@ async function main() {
           rowAlignment: getComputedStyle(row).alignItems,
           bubble: { fontSize: bubbleStyle.fontSize, radius: bubbleStyle.borderRadius,
             background: bubbleStyle.backgroundColor, maxWidth: bubbleStyle.maxWidth },
-          composer: { fontSize: inputStyle.fontSize, borderWidth: inputStyle.borderTopWidth,
-            radius: inputStyle.borderRadius, width: input.getBoundingClientRect().width },
+          composer: { fontSize: inputStyle.fontSize, borderWidth: composerStyle.borderTopWidth,
+            radius: composerStyle.borderRadius, width: composer.getBoundingClientRect().width },
           stream: { overflow: streamStyle.overflowY, paddingLeft: streamStyle.paddingLeft,
             paddingTop: streamStyle.paddingTop },
           tokens: { controlFont: expectedFont, panelRadius: expectedRadius },
@@ -74,6 +79,8 @@ async function main() {
           horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
         }
       })
+      sample.sendControls = await send.count()
+      assert.ok(Object.values(sample.typography).every(Boolean), 'bubble and composer must match the control font token')
       assert.equal(sample.rowAlignment, 'flex-end', 'kit source must style the user row')
       assert.equal(sample.bubble.radius, sample.tokens.panelRadius)
       assert.notEqual(sample.bubble.radius, '0px')
@@ -95,7 +102,7 @@ async function main() {
       await page.getByText('Start a conversation', { exact: true }).waitFor()
     }
     assert.deepEqual(errors, [], 'browser must have no uncaught page errors')
-    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, and interaction; typography is measured separately', pageErrors: errors, samples }, null, 2))
+    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, control-token typography, one Send control, and interaction', pageErrors: errors, samples }, null, 2))
   } finally {
     await browser.close()
   }

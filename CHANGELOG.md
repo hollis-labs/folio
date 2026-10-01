@@ -14,11 +14,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   endpoint. CI checks frontend type/lint/build before the embedded Go server.
   Opt-in consumer E2E can also drive the real Go app in headless Chromium and
   assert emitted utilities/computed styles, send and conversation reset.
-  The `design_kit_version` default targets 0.1.x until the next kit-chat or
-  kit-dashboard minor ships; bump that default deliberately to pick up the
-  merged polish fixes. No agent service, secrets, markdown or persistence added.
+  No agent service, secrets, markdown or persistence added.
 
 ### Changed
+
+- New `app-dashboard` and `chat-app` scaffolds default `design_kit_version`
+  to 0.2.0 and generate `^0.2.0` ranges for published design-kit packages.
+  The chat browser check verifies one Send control and the corrected 13px
+  bubble/composer typography. Existing generated apps are not rewritten.
 
 - New `app-dashboard` scaffolds (including the `sysop-ui` alias) bind to
   `127.0.0.1:8080` by default, matching `chat-app`. `LISTEN_ADDR` can override
@@ -27,7 +30,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   projects are not rewritten.
 
 - **`app-dashboard` 2.0.0 replaces the `sysop-ui` template.** It scaffolds onto
-  published design-kit packages and kit-dashboard (`design_kit_version=0.1.0`),
+  published design-kit packages and kit-dashboard (`design_kit_version=0.2.0`),
   adopts AppShell and the runtime API/context, and imports the kit theme plus
   shell reset. The generated CI typechecks, lints with Biome and the design-token
   ESLint config, builds the frontend, then checks the Go server. `sysop-ui`

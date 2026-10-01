@@ -42,13 +42,12 @@ if changing the development port, update Vite's API proxy to match.
 ## Styling and package versions
 
 `design_kit_version={{ .inputs.design_kit_version }}` supplies the published
-foundation, kit-chat and design ESLint package versions. Its default targets
-**0.1.x**; `^0.1.0` does not include 0.2.0. The next kit-chat/kit-dashboard minor
-requires a deliberate Folio default bump; the merged kit-chat polish fixes arrive
-with that release. Registry 0.1.0 can emit the control-font utility while the
-message bubble computes 16px and the desktop composer 14px (rather than the 13px
-control token); the browser check reports this known typography mismatch. Do not
-assume an unreleased source fix is in a registry build.
+foundation, kit-chat and design ESLint package versions. The default is
+**0.2.0**, generating `^0.2.0` ranges for the published 0.2.x packages. This
+release includes the 13px bubble/composer typography fixes and the built-in Send
+control. The starter delegates sending to `ChatInput` rather than adding a
+second control. Override the input deliberately when choosing another version;
+existing generated apps are not updated automatically.
 
 The CSS imports Tailwind v4, the token theme, base component source registration,
 **kit-chat/source.css**, and the runtime shell reset. Keep the kit-chat source
