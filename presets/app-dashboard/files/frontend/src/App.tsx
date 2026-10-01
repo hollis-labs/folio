@@ -1,4 +1,5 @@
-import { NavRail, type NavRailItem, PageHeader, ThemeSwitcher } from "@hollis-labs/sysop-ui"
+import { AppShell } from "@hollis-labs/design-components"
+import { NavRail, type NavRailItem, PageHeader, ThemeSwitcher } from "@hollis-labs/kit-dashboard"
 import { Activity, LayoutDashboard } from "lucide-react"
 import { useState } from "react"
 import { DashboardPage } from "./pages/dashboard"
@@ -21,19 +22,20 @@ export function App() {
   ]
 
   return (
-    <div className="flex h-screen bg-bg text-text">
-      <NavRail
-        items={nav}
-        logo={<Activity className="h-4 w-4" />}
-        logoLabel="Sysop"
-        footerExtra={<ThemeSwitcher />}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <PageHeader title="Dashboard" />
-        <main className="min-h-0 flex-1 overflow-auto">
-          <DashboardPage />
-        </main>
+    <AppShell
+      nav={
+        <NavRail
+          items={nav}
+          logo={<Activity className="h-4 w-4" />}
+          logoLabel="Dashboard"
+          footerExtra={<ThemeSwitcher />}
+        />
+      }
+      header={<PageHeader title="Dashboard" />}
+    >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+        <DashboardPage />
       </div>
-    </div>
+    </AppShell>
   )
 }

@@ -18,6 +18,17 @@ jobs:
         with:
           go-version: '{{ .inputs.go_version }}'
           cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build and lint the dashboard (including design tokens)
+        working-directory: frontend
+        run: |
+          npm install
+          npm run typecheck
+          npm run lint
+          npm run build
+      - run: go mod tidy
       - run: go vet ./...
       - run: go build ./...
       - run: go test ./...

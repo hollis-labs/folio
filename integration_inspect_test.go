@@ -9,7 +9,7 @@ import (
 	"github.com/hollis-labs/folio/service"
 )
 
-// The bundled base, go-baseline (through go-lib), sysop-ui and nanite-plugin
+// The bundled base, go-baseline (through go-lib), app-dashboard and nanite-plugin
 // presets all render LICENSE from computed.year = {{ .now.Year }}. Inspecting
 // years after generation must not call LICENSE (or anything else) drifted.
 func TestIntegration_InspectAfterYearRollover_ReportsNoDrift(t *testing.T) {

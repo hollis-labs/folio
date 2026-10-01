@@ -1,4 +1,4 @@
-import { createApiContext } from "@hollis-labs/sysop-ui"
+import { createApiContext } from "@hollis-labs/design-app-runtime"
 import { apiClient } from "./client"
 
 // Typed { ApiProvider, useApi } bound to this app's concrete client.

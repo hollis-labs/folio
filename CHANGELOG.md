@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **`app-dashboard` 2.0.0 replaces the `sysop-ui` template.** It scaffolds onto
+  published design-kit packages and kit-dashboard (`design_kit_version=0.1.0`),
+  adopts AppShell and the runtime API/context, and imports the kit theme plus
+  shell reset. The generated CI typechecks, lints with Biome and the design-token
+  ESLint config, builds the frontend, then checks the Go server. `sysop-ui`
+  remains a deprecated bundled alias for CLI calls and existing breadcrumbs;
+  new breadcrumbs record `app-dashboard`. The old `sysop_ui_version` input is
+  ignored with a warning. Existing apps are not rewritten and sync is still
+  unimplemented. The manifest-driven admin shell is deferred.
+
 ### Removed
 
 - **`go-baseline` no longer renders `CLAUDE.md`.** The one-line `@AGENTS.md` pointer is obsolete now that Claude Code reads `AGENTS.md` natively, and it was recorded in every generated project's `.folio.yaml` manifest. The manifest code itself is generic; the file came from the preset template `presets/go-baseline/files/CLAUDE.md.tmpl`, now deleted along with its assertions in the integration tests. Existing projects keep a stale `CLAUDE.md` entry in `.folio.yaml` until removed by hand.
