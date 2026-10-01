@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **`chat-app` 1.0.0** scaffolds a chat-first app on published design-kit and
+  kit-chat: AppShell/sidebar, host-owned transcript/draft, ChatStream/ChatInput,
+  explicit source registration, same-origin runtime API/context and a Go echo
+  endpoint. CI checks frontend type/lint/build before the embedded Go server.
+  Opt-in consumer E2E can also drive the real Go app in headless Chromium and
+  assert emitted utilities/computed styles, send and conversation reset.
+  The `design_kit_version` default targets 0.1.x until the next kit-chat or
+  kit-dashboard minor ships; bump that default deliberately to pick up the
+  merged polish fixes. No agent service, secrets, markdown or persistence added.
+
 ### Changed
 
 - **`app-dashboard` 2.0.0 replaces the `sysop-ui` template.** It scaffolds onto

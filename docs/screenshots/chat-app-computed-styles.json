@@ -1,0 +1,77 @@
+{
+  "result": "PASS",
+  "scope": "source emission, styled layout, and interaction; typography is measured separately",
+  "pageErrors": [],
+  "samples": [
+    {
+      "viewport": 1024,
+      "rowAlignment": "flex-end",
+      "bubble": {
+        "fontSize": "16px",
+        "radius": "10px",
+        "background": "rgb(39, 39, 42)",
+        "maxWidth": "512px"
+      },
+      "composer": {
+        "fontSize": "14px",
+        "borderWidth": "1px",
+        "radius": "8px",
+        "width": 768
+      },
+      "stream": {
+        "overflow": "auto",
+        "paddingLeft": "16px",
+        "paddingTop": "24px"
+      },
+      "tokens": {
+        "controlFont": "13px",
+        "panelRadius": "10px"
+      },
+      "typography": {
+        "bubbleMatchesControlToken": false,
+        "composerMatchesControlToken": false
+      },
+      "emitted": {
+        "controlFont": true,
+        "userAlignment": true,
+        "maxWidth": true
+      },
+      "horizontalOverflow": false
+    },
+    {
+      "viewport": 390,
+      "rowAlignment": "flex-end",
+      "bubble": {
+        "fontSize": "16px",
+        "radius": "10px",
+        "background": "rgb(39, 39, 42)",
+        "maxWidth": "512px"
+      },
+      "composer": {
+        "fontSize": "13px",
+        "borderWidth": "1px",
+        "radius": "8px",
+        "width": 358
+      },
+      "stream": {
+        "overflow": "auto",
+        "paddingLeft": "16px",
+        "paddingTop": "24px"
+      },
+      "tokens": {
+        "controlFont": "13px",
+        "panelRadius": "10px"
+      },
+      "typography": {
+        "bubbleMatchesControlToken": false,
+        "composerMatchesControlToken": true
+      },
+      "emitted": {
+        "controlFont": true,
+        "userAlignment": true,
+        "maxWidth": true
+      },
+      "horizontalOverflow": false
+    }
+  ]
+}

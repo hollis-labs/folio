@@ -1,0 +1,4 @@
+This file keeps internal/webui/dist/ present so `//go:embed all:dist` in
+embed.go compiles before the first `make ui-build`. The build step (vite,
+with emptyOutDir) replaces this directory's contents with the real Sysop
+UI assets.

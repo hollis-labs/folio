@@ -1,0 +1,95 @@
+folio_version: "0.1"
+id: chat-app
+version: 1.0.0
+description: Chat app — design-kit and kit-chat React frontend served by a Go binary via go-webui
+author: hollis-labs
+license: MIT
+
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go module + binary name (lowercase, snake_case)
+
+  - name: github_owner
+    type: string
+    required: true
+    default: hollis-labs
+    description: GitHub org or user that hosts the project repo
+
+  - name: description
+    type: string
+    default: ""
+    description: One-line project description
+
+  - name: base_path
+    type: string
+    default: /chat
+    description: URL path the chat is mounted at — leading slash, no trailing slash (e.g. /chat)
+
+  - name: design_kit_version
+    type: string
+    default: "0.1.0"
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: Published design-kit package version (npm semver, without a v prefix)
+
+  - name: go_webui_version
+    type: string
+    default: v0.1.0
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: github.com/hollis-labs/go-webui module version (v-prefixed semver)
+
+  - name: go_version
+    type: string
+    default: "1.26.6"
+    pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    description: >-
+      Go language version. Renders into go.mod, the CI workflow and
+      golangci-lint's `go:` key from one input so the three cannot drift.
+      The default is the portfolio floor (go 1.26.6): govulncheck judges the
+      stdlib by go.mod's `go` line, so a lower floor reports fixed advisories.
+
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks run against.
+      Override for repos where `./...` pulls in trees that should not gate a
+      commit.
+
+computed:
+  module_path: "github.com/{{ .inputs.github_owner }}/{{ .inputs.project_name }}"
+  app_title: "{{ pascalCase .inputs.project_name }}"
+  year: "{{ .now.Year }}"
+
+files:
+  source: ./files
+  template_suffix: .tmpl
+
+sync:
+  default: prompt
+  rules:
+    - glob: "Makefile"
+      policy: overwrite
+    # Shared portfolio configs: folio is the canonical copy, so a re-render
+    # replaces them. A project needing a local deviation should get it added
+    # here as an input rather than editing the rendered file.
+    - glob: "lefthook.yml"
+      policy: overwrite
+    - glob: ".golangci.yml"
+      policy: overwrite
+    - glob: "frontend/eslint.config.js"
+      policy: overwrite
+    - glob: "frontend/biome.json"
+      policy: overwrite
+    - glob: ".github/workflows/**"
+      policy: overwrite
+    - glob: "go.mod"
+      policy: skip
+    - glob: "internal/**"
+      policy: skip
+    - glob: "frontend/src/**"
+      policy: skip
+    - glob: "README.md"
+      policy: three-way
