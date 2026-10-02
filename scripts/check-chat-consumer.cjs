@@ -32,6 +32,12 @@ async function main() {
       await input.waitFor()
       const send = page.getByRole('button', { name: /^Send(?: message)?$/ })
       assert.equal(await send.count(), 1, 'ChatInput must supply exactly one Send control')
+      const sendStyle = await send.evaluate((button) => {
+        const style = getComputedStyle(button)
+        return { radius: style.borderRadius, fontSize: style.fontSize }
+      })
+      assert.equal(sendStyle.radius, '6px', 'Send must use the control radius')
+      assert.equal(sendStyle.fontSize, '13px', 'Send must use the control font')
       await input.fill(`Hello at ${width}`)
       await send.click()
       await page.getByText(`Echo: Hello at ${width}`, { exact: true }).waitFor()
@@ -80,6 +86,8 @@ async function main() {
         }
       })
       sample.sendControls = await send.count()
+      sample.send = sendStyle
+      assert.equal(sample.tokens.controlFont, '13px')
       assert.ok(Object.values(sample.typography).every(Boolean), 'bubble and composer must match the control font token')
       assert.equal(sample.rowAlignment, 'flex-end', 'kit source must style the user row')
       assert.equal(sample.bubble.radius, sample.tokens.panelRadius)
@@ -102,7 +110,7 @@ async function main() {
       await page.getByText('Start a conversation', { exact: true }).waitFor()
     }
     assert.deepEqual(errors, [], 'browser must have no uncaught page errors')
-    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, control-token typography, one Send control, and interaction', pageErrors: errors, samples }, null, 2))
+    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, control-token typography, one Send control with 6px radius and 13px font, and interaction', pageErrors: errors, samples }, null, 2))
   } finally {
     await browser.close()
   }
