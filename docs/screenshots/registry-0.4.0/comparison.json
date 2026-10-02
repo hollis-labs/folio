@@ -1,0 +1,195 @@
+{
+  "baselineTask": "CW-20261002-0025",
+  "candidateTask": "CW-20261002-0126",
+  "packages": {
+    "dashboard": {
+      "@hollis-labs/design-app-runtime": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/design-components": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/design-tokens": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/eslint-config-design": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/kit-dashboard": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      }
+    },
+    "chat": {
+      "@hollis-labs/design-app-runtime": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/design-bindings": {
+        "before": "0.1.0",
+        "after": "0.1.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/design-components": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/design-tokens": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/eslint-config-design": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      },
+      "@hollis-labs/kit-chat": {
+        "before": "0.3.0",
+        "after": "0.4.0",
+        "beforeCopies": 1,
+        "afterCopies": 1
+      }
+    }
+  },
+  "styles": [
+    {
+      "width": 1024,
+      "properties": {
+        "sendControls": {
+          "before": 1,
+          "after": 1,
+          "unchanged": true
+        },
+        "Send radius": {
+          "before": "6px",
+          "after": "6px",
+          "unchanged": true
+        },
+        "Send font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Bubble font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Composer font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Composer radius": {
+          "before": "10px",
+          "after": "10px",
+          "unchanged": true
+        },
+        "Composer width": {
+          "before": 768,
+          "after": 768,
+          "unchanged": true
+        },
+        "Bubble background": {
+          "before": "rgb(39, 39, 42)",
+          "after": "rgb(39, 39, 42)",
+          "unchanged": true
+        },
+        "Row alignment": {
+          "before": "flex-end",
+          "after": "flex-end",
+          "unchanged": true
+        },
+        "Horizontal overflow": {
+          "before": false,
+          "after": false,
+          "unchanged": true
+        }
+      },
+      "afterFocusContrast": 6.02319782956186,
+      "theme": "dir-a",
+      "mode": "dark"
+    },
+    {
+      "width": 390,
+      "properties": {
+        "sendControls": {
+          "before": 1,
+          "after": 1,
+          "unchanged": true
+        },
+        "Send radius": {
+          "before": "6px",
+          "after": "6px",
+          "unchanged": true
+        },
+        "Send font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Bubble font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Composer font": {
+          "before": "13px",
+          "after": "13px",
+          "unchanged": true
+        },
+        "Composer radius": {
+          "before": "10px",
+          "after": "10px",
+          "unchanged": true
+        },
+        "Composer width": {
+          "before": 358,
+          "after": 358,
+          "unchanged": true
+        },
+        "Bubble background": {
+          "before": "rgb(39, 39, 42)",
+          "after": "rgb(39, 39, 42)",
+          "unchanged": true
+        },
+        "Row alignment": {
+          "before": "flex-end",
+          "after": "flex-end",
+          "unchanged": true
+        },
+        "Horizontal overflow": {
+          "before": false,
+          "after": false,
+          "unchanged": true
+        }
+      },
+      "afterFocusContrast": 6.02319782956186,
+      "theme": "dir-a",
+      "mode": "dark"
+    }
+  ],
+  "priorFocusContrast": "not recorded by 0025; no before ratio is claimed"
+}

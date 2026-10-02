@@ -104,7 +104,7 @@ func TestIntegration_AppDashboardPreset_Defaults(t *testing.T) {
 	// package.json — published design-kit packages rather than a git-tag kit.
 	pkg := readFile(t, target, "frontend/package.json")
 	for _, name := range []string{"design-tokens", "design-components", "design-app-runtime", "kit-dashboard", "eslint-config-design"} {
-		if !strings.Contains(pkg, `"@hollis-labs/`+name+`": "^0.3.0"`) {
+		if !strings.Contains(pkg, `"@hollis-labs/`+name+`": "^0.4.0"`) {
 			t.Errorf("frontend/package.json missing published %s dependency:\n%s", name, pkg)
 		}
 	}

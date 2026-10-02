@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "pageErrors": [],
+  "consoleErrors": [],
+  "samples": [
+    {
+      "width": 1024,
+      "theme": "p4-white",
+      "background": "rgb(9, 9, 11)",
+      "text": "DASHBOARD\nSERVER\nok\nUI\nready",
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "theme": "p4-white",
+      "background": "rgb(9, 9, 11)",
+      "text": "DASHBOARD\nSERVER\nok\nUI\nready",
+      "overflow": false
+    }
+  ]
+}

@@ -19,11 +19,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - New `app-dashboard` and `chat-app` scaffolds default `design_kit_version`
-  to 0.3.0 and generate `^0.3.0` ranges for published design-kit packages.
+  to 0.4.0 and generate `^0.4.0` ranges for published design-kit packages.
   The chat browser check verifies one Send control and the corrected 13px
-  bubble/composer typography and 6px Send control radius. The optional Stop
-  state is verified separately against the same published kit and starter CSS.
-  Existing generated apps are not rewritten.
+  bubble/composer typography and 6px Send control radius. Prior 0.3.0 evidence
+  covers the optional Stop state separately against the published kit and
+  starter CSS.
+  The 0.4.0 registry proof also measures keyboard focus contrast on the actual
+  starter Send Button. Existing generated apps are not rewritten.
 
 - New `app-dashboard` scaffolds (including the `sysop-ui` alias) bind to
   `127.0.0.1:8080` by default, matching `chat-app`. `LISTEN_ADDR` can override
@@ -32,7 +34,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   projects are not rewritten.
 
 - **`app-dashboard` 2.0.0 replaces the `sysop-ui` template.** It scaffolds onto
-  published design-kit packages and kit-dashboard (`design_kit_version=0.3.0`),
+  published design-kit packages and kit-dashboard (`design_kit_version=0.4.0`),
   adopts AppShell and the runtime API/context, and imports the kit theme plus
   shell reset. The generated CI typechecks, lints with Biome and the design-token
   ESLint config, builds the frontend, then checks the Go server. `sysop-ui`

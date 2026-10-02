@@ -1,0 +1,110 @@
+{
+  "dashboard": {
+    "result": "PASS",
+    "packages": {
+      "@hollis-labs/design-app-runtime": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-app-runtime",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-app-runtime/-/design-app-runtime-0.4.0.tgz",
+          "integrity": "sha512-uFUdLTns6EIZPHVEUSXrfRGUJ3XLkBqPaTA1kEmll2qRI795KGAdxNKDmbtuoVk6wpu9k5nOjnOjNFM04PXarQ=="
+        }
+      ],
+      "@hollis-labs/design-components": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-components",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-components/-/design-components-0.4.0.tgz",
+          "integrity": "sha512-kHO3eHvCBGci7H9uNSNl5Y7U9fV871V5An6mWM7hbZgTAfVlBNZ+OQfYDLRuHY33DGJ0RIUchIc8kRhkYmNpgA=="
+        }
+      ],
+      "@hollis-labs/design-tokens": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-tokens",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-tokens/-/design-tokens-0.4.0.tgz",
+          "integrity": "sha512-LhY9HuBqjp46Xa/vXhkCxCQfBQyvbM6AlUznsi/xmkl0mzPqD3zd0C7tbIoUgkR9z1bHiV48SL3mzokl9PEQwQ=="
+        }
+      ],
+      "@hollis-labs/eslint-config-design": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/eslint-config-design",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/eslint-config-design/-/eslint-config-design-0.4.0.tgz",
+          "integrity": "sha512-IRqaEXUvpnirzYM+X+KSzQM2G1aukbiXWkCzIEUoOJcQfdvz+00DNfDHUT26QEghdC0myyNpO5vDmx3iXge7yA=="
+        }
+      ],
+      "@hollis-labs/kit-dashboard": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/kit-dashboard",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/kit-dashboard/-/kit-dashboard-0.4.0.tgz",
+          "integrity": "sha512-Ab3e9LsxmUJq+kBxy404NIE0UG+ug+jItz4dIHLBv/5tVoa40IedwVx55slgduKTfEe4ucYe1Wf5S3JbuFETTw=="
+        }
+      ]
+    },
+    "peerWarnings": [],
+    "treeProblems": [],
+    "registry": "https://registry.npmjs.org/",
+    "source": "own npm ls --all JSON/parseable and physical manifests + own package-lock",
+    "settingsObserveScaffolded": false
+  },
+  "chat": {
+    "result": "PASS",
+    "packages": {
+      "@hollis-labs/design-app-runtime": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-app-runtime",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-app-runtime/-/design-app-runtime-0.4.0.tgz",
+          "integrity": "sha512-uFUdLTns6EIZPHVEUSXrfRGUJ3XLkBqPaTA1kEmll2qRI795KGAdxNKDmbtuoVk6wpu9k5nOjnOjNFM04PXarQ=="
+        }
+      ],
+      "@hollis-labs/design-bindings": [
+        {
+          "version": "0.1.0",
+          "lockPath": "node_modules/@hollis-labs/design-bindings",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-bindings/-/design-bindings-0.1.0.tgz",
+          "integrity": "sha512-tRRNruWnm+4Apg0Gdjaqb2KXyvl0QyevtuUKxsHKlZ2/ittyaMKaWy5lEsfQpQrG8tzwAURlV/UnPvU8z5YJog=="
+        }
+      ],
+      "@hollis-labs/design-components": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-components",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-components/-/design-components-0.4.0.tgz",
+          "integrity": "sha512-kHO3eHvCBGci7H9uNSNl5Y7U9fV871V5An6mWM7hbZgTAfVlBNZ+OQfYDLRuHY33DGJ0RIUchIc8kRhkYmNpgA=="
+        }
+      ],
+      "@hollis-labs/design-tokens": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/design-tokens",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/design-tokens/-/design-tokens-0.4.0.tgz",
+          "integrity": "sha512-LhY9HuBqjp46Xa/vXhkCxCQfBQyvbM6AlUznsi/xmkl0mzPqD3zd0C7tbIoUgkR9z1bHiV48SL3mzokl9PEQwQ=="
+        }
+      ],
+      "@hollis-labs/eslint-config-design": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/eslint-config-design",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/eslint-config-design/-/eslint-config-design-0.4.0.tgz",
+          "integrity": "sha512-IRqaEXUvpnirzYM+X+KSzQM2G1aukbiXWkCzIEUoOJcQfdvz+00DNfDHUT26QEghdC0myyNpO5vDmx3iXge7yA=="
+        }
+      ],
+      "@hollis-labs/kit-chat": [
+        {
+          "version": "0.4.0",
+          "lockPath": "node_modules/@hollis-labs/kit-chat",
+          "resolved": "https://registry.npmjs.org/@hollis-labs/kit-chat/-/kit-chat-0.4.0.tgz",
+          "integrity": "sha512-eM6ePb/S9KSRyaq2DUKvC2ukwaFusGbKkTBn/GEAuLMfc/IrSeAmU7DbMte1hKQC2Aoll2bDrhrnO1k0hJgmwg=="
+        }
+      ]
+    },
+    "peerWarnings": [],
+    "treeProblems": [],
+    "registry": "https://registry.npmjs.org/",
+    "source": "own npm ls --all JSON/parseable and physical manifests + own package-lock",
+    "settingsObserveScaffolded": false
+  }
+}

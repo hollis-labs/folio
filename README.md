@@ -189,7 +189,7 @@ folio new app-dashboard /tmp/my-dashboard \
 ```
 
 `app-dashboard` renders the design-kit foundation plus kit-dashboard, with
-published npm packages (`design_kit_version`, default `0.3.0`). The generated
+published npm packages (`design_kit_version`, default `0.4.0`). The generated
 frontend uses the real `AppShell`, same-origin API client/context, the kit theme
 and shell reset; its CI runs frontend typecheck, Biome/design-token lint and
 build before the Go checks. The manifest-driven admin shell is deferred.
@@ -231,9 +231,10 @@ works immediately; replace the endpoint/client with your application's transport
 Draft and transcript are app-owned, ephemeral state. No Nanite dependency,
 credentials, persistence or optional markdown renderer is included.
 
-`design_kit_version` is the single design-kit version input, defaulting to 0.3.0.
-The generated `^0.3.0` ranges select the published 0.3.x packages, including the
-kit-chat control-font and composer fixes plus the 6px small-control radius.
+`design_kit_version` is the single design-kit version input, defaulting to 0.4.0.
+The generated `^0.4.0` ranges select the published 0.4.x packages, including the
+kit-chat control-font and composer fixes, the 6px small-control radius and
+stronger keyboard focus indicators.
 Existing generated apps keep their dependencies until intentionally updated.
 
 The normal preset/discovery tests stay offline. To install published packages,
@@ -259,9 +260,11 @@ FOLIO_FRONTEND_E2E=1 FOLIO_BROWSER_E2E=1 \
 check verifies user-row alignment, token radius, bubble background/width,
 composer border/radius, scroll layout, emitted chat utilities, message send and
 reset, one Send control with a 6px radius, and bubble/composer typography
-matching the 13px control token at desktop and narrow widths, with no page errors. These fixes ship in the
-registry 0.3.0 packages. The Go app runs on a temporary loopback port and tool
-homes/output are temporary.
+matching the 13px control token at desktop and narrow widths. It also reaches
+Send with Tab, requires its ring to reach 3:1 against the actual composited
+surround, and checks page and console errors. The registry 0.4.0 packages retain
+the 0.3.0 typography/radius fixes and strengthen focus indicators. The Go app
+runs on a temporary loopback port; tool homes/output are temporary.
 
 ## License
 
