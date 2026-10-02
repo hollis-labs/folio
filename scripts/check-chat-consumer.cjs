@@ -23,6 +23,8 @@ async function main() {
   try {
     const page = await browser.newPage()
     const errors = []
+    const consoleErrors = []
+    page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()) })
     page.on('pageerror', (error) => errors.push(error.message))
     const samples = []
     for (const width of [1024, 390]) {
@@ -39,6 +41,56 @@ async function main() {
       assert.equal(sendStyle.radius, '6px', 'Send must use the control radius')
       assert.equal(sendStyle.fontSize, '13px', 'Send must use the control font')
       await input.fill(`Hello at ${width}`)
+      // Reach the rendered Send with the keyboard and measure its painted ring
+      // against its actual surrounding surface, including alpha backgrounds.
+      await input.click()
+      for (let step = 0; step < 12; step++) {
+        await page.keyboard.press('Tab')
+        if (await send.evaluate((button) => button === document.activeElement)) break
+      }
+      await page.waitForTimeout(300)
+      const keyboardFocus = await send.evaluate((button) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1
+        const context = canvas.getContext('2d', { willReadFrequently: true })
+        const color = (value) => {
+          context.clearRect(0, 0, 1, 1)
+          context.fillStyle = value
+          context.fillRect(0, 0, 1, 1)
+          return [...context.getImageData(0, 0, 1, 1).data].map((v, i) => i === 3 ? v / 255 : v)
+        }
+        const over = (a, b) => {
+          const alpha = a[3] + b[3] * (1 - a[3])
+          return [0, 1, 2].map((i) => alpha ? (a[i] * a[3] + b[i] * b[3] * (1 - a[3])) / alpha : 0).concat(alpha)
+        }
+        const luminance = (c) => c.slice(0, 3).map((v) => v / 255)
+          .map((v) => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
+          .reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0)
+        const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05)
+        if (contrast([0, 0, 0, 1], [255, 255, 255, 1]) !== 21 || contrast([128, 128, 128, 1], [128, 128, 128, 1]) !== 1) throw Error('Contrast controls failed')
+        let background = [0, 0, 0, 0]
+        for (let node = button.parentElement; node; node = node.parentElement) {
+          const style = getComputedStyle(node)
+          background = over(background, color(style.backgroundColor))
+          background[3] *= Number(style.opacity)
+        }
+        background = over(background, [255, 255, 255, 1])
+        const style = getComputedStyle(button)
+        const colors = (style.boxShadow.match(/(?:rgba?|oklab|oklch|color)\([^)]*\)[^,]*/g) || [])
+          .filter((entry) => { const lengths = entry.replace(/^[^)]*\)/, '').match(/-?[\d.]+px/g) || []; return parseFloat(lengths[3]) > 0 })
+          .map((entry) => color(entry.match(/^[^)]*\)/)[0])).filter((c) => c[3] > 0)
+        const ratio = colors.length ? Math.max(...colors.map((c) => contrast(over(c, background), background))) : 0
+        return { theme: document.documentElement.dataset.theme || null, mode: document.documentElement.dataset.mode || null,
+          colorScheme: getComputedStyle(document.documentElement).colorScheme,
+          focused: button === document.activeElement, focusVisible: button.matches(':focus-visible'),
+          shadow: style.boxShadow, outline: style.outline, surrounding: background, contrast: ratio }
+      })
+      assert.ok(keyboardFocus.focused && keyboardFocus.focusVisible, 'Send must receive real keyboard focus')
+      assert.ok(keyboardFocus.contrast >= 3, 'Send keyboard ring must reach 3:1 on its actual surrounding surface')
+      if (process.env.FOLIO_SCREENSHOT_DIR) {
+        await fs.mkdir(process.env.FOLIO_SCREENSHOT_DIR, { recursive: true })
+        await page.screenshot({ path: path.join(process.env.FOLIO_SCREENSHOT_DIR, `chat-focus-${width}.png`) })
+      }
       await send.click()
       await page.getByText(`Echo: Hello at ${width}`, { exact: true }).waitFor()
       assert.equal(await input.inputValue(), '', 'submit must clear the draft')
@@ -87,6 +139,7 @@ async function main() {
       })
       sample.sendControls = await send.count()
       sample.send = sendStyle
+      sample.keyboardFocus = keyboardFocus
       assert.equal(sample.tokens.controlFont, '13px')
       assert.ok(Object.values(sample.typography).every(Boolean), 'bubble and composer must match the control font token')
       assert.equal(sample.rowAlignment, 'flex-end', 'kit source must style the user row')
@@ -110,7 +163,8 @@ async function main() {
       await page.getByText('Start a conversation', { exact: true }).waitFor()
     }
     assert.deepEqual(errors, [], 'browser must have no uncaught page errors')
-    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, control-token typography, one Send control with 6px radius and 13px font, and interaction', pageErrors: errors, samples }, null, 2))
+    assert.deepEqual(consoleErrors, [], 'browser must have no console errors')
+    console.log(JSON.stringify({ result: 'PASS', scope: 'source emission, styled layout, control-token typography, one Send control with 6px radius and 13px font, keyboard ring contrast >=3:1, and interaction', pageErrors: errors, consoleErrors, samples }, null, 2))
   } finally {
     await browser.close()
   }

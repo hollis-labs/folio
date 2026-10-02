@@ -1,0 +1,31 @@
+{
+  "task": "CW-20261002-0126",
+  "result": "PASS",
+  "gates": {
+    "make-all": "PASS",
+    "make-pins": "PASS",
+    "make-vuln": "PASS",
+    "dashboard-install": "PASS",
+    "dashboard-typecheck": "PASS",
+    "dashboard-lint": "PASS",
+    "dashboard-build": "PASS",
+    "dashboard-npm-ls": "PASS",
+    "dashboard-npm-paths": "PASS",
+    "dashboard-npm-tree": "PASS",
+    "dashboard-go-tidy": "PASS",
+    "dashboard-go-build": "PASS",
+    "chat-install": "PASS",
+    "chat-typecheck": "PASS",
+    "chat-lint": "PASS",
+    "chat-build": "PASS",
+    "chat-npm-ls": "PASS",
+    "chat-npm-paths": "PASS",
+    "chat-npm-tree": "PASS",
+    "chat-go-tidy": "PASS",
+    "chat-go-build": "PASS",
+    "dashboard-browser": "PASS",
+    "chat-browser": "PASS"
+  },
+  "sourceBase": "dd99055e691c548e08140544d9668f5a44f90eea",
+  "registryProof": "/home/chrispian/.cache/team-tmp/task-design-kit-3/0126/registry-proof.json"
+}

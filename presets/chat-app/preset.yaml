@@ -30,7 +30,7 @@ inputs:
 
   - name: design_kit_version
     type: string
-    default: "0.3.0"
+    default: "0.4.0"
     pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
     description: Published design-kit package version (npm semver, without a v prefix)
 

@@ -1,6 +1,75 @@
 # Generated chat-app consumer verification
 
-## Registry 0.3.0 verification
+## Registry 0.4.0 verification
+
+CW-20261002-0126, 2026-10-02. Both current presets default
+`design_kit_version` to 0.4.0 and emit `^0.4.0` ranges. Fresh apps rendered by
+this Folio were installed from the public npm registry with two separate empty
+user/global configs. Both passed typecheck, Biome/design ESLint, production
+Vite build and Go compilation. Neither preset scaffolds kit-settings or
+kit-observe; no package was added.
+
+Own `npm ls --all` JSON and parseable paths, physical manifests and lockfiles
+agree: exactly one installed copy of every expected package, all core packages
+at 0.4.0, no nested 0.3.0, no tree problems or peer-resolution warnings. Registry
+URLs and integrities are preserved in [the dependency receipt](screenshots/registry-0.4.0/registry-proof.json).
+
+| Package | app-dashboard | chat-app |
+| --- | --- | --- |
+| design-tokens | one 0.4.0 | one 0.4.0 |
+| design-components | one 0.4.0 | one 0.4.0 |
+| design-app-runtime | one 0.4.0 | one 0.4.0 |
+| eslint-config-design | one 0.4.0 | one 0.4.0 |
+| kit-dashboard | one 0.4.0 | absent |
+| kit-chat | absent | one 0.4.0 |
+| design-bindings (unchanged transitive) | absent | one 0.1.0 |
+
+Both actual generated Go apps served their embedded production UI on temporary
+loopback ports at 1024 × 800 and 390 × 800. Dashboard rendered the server's `ok`
+and UI `ready` values. Chat sent and received real local echoes, cleared the
+draft and reset the transcript. Both had zero uncaught page errors, zero
+console errors and no horizontal overflow. See [dashboard](screenshots/registry-0.4.0/dashboard-browser.json)
+and [chat](screenshots/registry-0.4.0/chat-browser.json) browser receipts.
+
+The chat check clicks the populated composer, uses real Tab keys to reach its
+Send Button, waits for settled styling, then measures its positive-spread 3px
+box-shadow against the actual composited ancestor background. CSS colors and
+alpha resolve through a canvas; WCAG sRGB luminance is checked with 21:1 and
+1:1 controls. The ring is `rgb(150 150 156)` on `rgb(24 24 27)`: **6.02319783:1**
+at both widths. The measured state is **dir-a / dark**, not an all-theme proof.
+[Desktop focus](screenshots/registry-0.4.0/chat-focus-1024.png) and
+[narrow focus](screenshots/registry-0.4.0/chat-focus-390.png) show the indicator.
+The existing optional browser check now requires this real keyboard-focus
+contrast and records theme/mode, painted shadow and surrounding color.
+
+| Compared with the 0.3.0 receipt | 0.3.0 | 0.4.0 |
+| --- | --- | --- |
+| Send count / radius / font (both widths) | 1 / 6px / 13px | 1 / 6px / 13px |
+| Bubble / composer font | 13px / 13px | 13px / 13px |
+| Composer border / radius | 1px / 10px | 1px / 10px |
+| Composer width, desktop / narrow | 768px / 358px | 768px / 358px |
+| Keyboard ring contrast | not recorded | 6.023:1 / 6.023:1 |
+
+[Comparison JSON](screenshots/registry-0.4.0/comparison.json) retains before/after
+package versions, copy counts and each measured style. The historical 0.3.0
+receipts below remain unchanged. No 0.3.0 focus ratio is inferred. The starter
+still does not render Stop; this proof adds no cancellation behavior.
+
+One end-of-work run through `heavytest` passed Folio `make all` (tidy, vet,
+golangci-lint 2.11.4 and the full race suite), `make pins` with self-test and
+`make vuln` (govulncheck 1.8.0), then the registry and browser proof above.
+[Gate receipt](screenshots/registry-0.4.0/gate.json). The same opt-in integration
+command in Artifacts and reproduction runs the committed chat browser check;
+run heavy verification through `heavytest` on the team machine. Raw logs and
+scratch consumers are task-local; durable summaries are in
+`~/dev/agent-os/workspaces/drafts/CW-20261002-0126/`.
+
+Coverage is Chromium, the actual default starter palette and these two widths,
+local health/echo endpoints and rendered controls. Other palettes, browsers,
+agent backends, persistence and optional kit states are outside this receipt.
+Existing generated apps are not rewritten; no publish, tag or deploy occurs.
+
+## Historical registry 0.3.0 verification
 
 CW-20261002-0025, 2026-10-02. Both `app-dashboard` and `chat-app` default
 `design_kit_version` to 0.3.0 and generate `^0.3.0` ranges. Fresh scaffolds
