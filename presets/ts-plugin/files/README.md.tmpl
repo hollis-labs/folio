@@ -3,9 +3,12 @@
 {{ .inputs.description }}
 
 This is a protocol-2 plugin. Replace the **PLACEHOLDER** SDK dependency
-`PROTOCOL_2_RELEASE_REQUIRED` with the first protocol-2 release, or render with
-`--input sdk_spec=file:/path/to/plugin-sdk.tgz` for local development. No package
-is published by this scaffold. Node 22+ runs authoring tools; esbuild bundles the
+`PROTOCOL_2_RELEASE_REQUIRED` with an SDK release explicitly supporting protocol 2.
+SDK main now implements Serve v2, but a merged commit is not a published release:
+keep the placeholder until a protocol-2 release exists. For local development,
+render with `--input sdk_spec=file:/path/to/plugin-sdk.tgz`, built from SDK main.
+The package's version alone is insufficient; verify its exported
+`PROTOCOL_VERSION` is 2. No package is published by this scaffold. Node 22+ runs authoring tools; esbuild bundles the
 worker for {{ .inputs.server_runtime }}. Deno is required for untrusted plugins;
 Node workers are trusted-only. The host owns permissions and data/cache roots.
 
@@ -52,5 +55,22 @@ Without an adapter dev mode only stages and verifies.
 
 **Live protocol-2 reload remains held until plugin-host lifecycle and host adoption
 land.** Tests use a stub HTTP receiver, not a production host. The SDK dependency
-must support protocol-2 Serve for harness/stdio acceptance; there is no protocol-1
-or legacy-manifest fallback. UI renderer modes are host-owned and remain separate.
+must support protocol-2 Serve for harness/stdio acceptance. SDK main supplies
+required incarnation, capability-contract and grant fields through its harness;
+the stdio test sends them explicitly. There is no protocol-1 or legacy-manifest
+fallback. UI renderer modes are host-owned and remain separate.
+
+To build a local SDK tarball from a sibling SDK checkout updated to main:
+
+```sh
+cd ../plugin-sdk/ts
+npm ci
+npm run build -w @hollis-labs/plugin-sdk
+node --input-type=module -e 'import {PROTOCOL_VERSION} from "@hollis-labs/plugin-sdk"; if (PROTOCOL_VERSION !== 2) throw new Error("Protocol-2 SDK required")'
+npm pack -w @hollis-labs/plugin-sdk
+```
+
+Pass that tarball through `sdk_spec` when rendering, or update the dependency to
+a `file:` tarball spec and regenerate the lockfile with `npm install`. Commit
+the lockfile; use `npm ci` for subsequent installs. This creates only a local
+package, without publishing or tagging.

@@ -74,14 +74,7 @@ func TestIntegration_TSPluginAcceptance(t *testing.T) {
 			runTSCommand(t, target, "npm", "install", "--package-lock-only", "--ignore-scripts", "--no-audit", "--no-fund")
 			runTSCommand(t, target, "npm", "ci", "--no-audit", "--no-fund")
 			runTSCommand(t, target, "npm", "run", "typecheck")
-			if os.Getenv("FOLIO_TS_SERVE_V2_HELD") == "1" {
-				runTSCommand(t, target, "npm", "run", "build")
-				runTSCommand(t, target, "node", "--test", "test/schema.test.mjs")
-				runTSCommand(t, target, "node", "--test", "test/reload.test.mjs")
-				t.Log("HOLD: protocol-2 harness and stdio execution await Serve v2; no fallback executed")
-			} else {
-				runTSCommand(t, target, "npm", "test")
-			}
+			runTSCommand(t, target, "npm", "test")
 			runTSCommand(t, target, "npm", "run", "verify")
 		})
 	}
