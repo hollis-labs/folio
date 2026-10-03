@@ -1,0 +1,17 @@
+{
+  "name": {{ json .inputs.plugin_name }},
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/schema.mjs",
+    "typecheck": "npm run generate && tsc --noEmit",
+    "build": "npm run generate && node scripts/build.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test": "npm run build && node --test --test-concurrency=1 test/*.test.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
+  "dependencies": { "@hollis-labs/plugin-sdk": {{ json .inputs.sdk_spec }} },
+  "devDependencies": { "esbuild": "0.25.12", "typescript": "6.0.2", "@types/node": "22.19.15" },
+  "engines": { "node": ">=22" }
+}

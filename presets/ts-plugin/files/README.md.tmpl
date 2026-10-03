@@ -1,0 +1,56 @@
+# {{ .computed.plugin_title }}
+
+{{ .inputs.description }}
+
+This is a protocol-2 plugin. Replace the **PLACEHOLDER** SDK dependency
+`PROTOCOL_2_RELEASE_REQUIRED` with the first protocol-2 release, or render with
+`--input sdk_spec=file:/path/to/plugin-sdk.tgz` for local development. No package
+is published by this scaffold. Node 22+ runs authoring tools; esbuild bundles the
+worker for {{ .inputs.server_runtime }}. Deno is required for untrusted plugins;
+Node workers are trusted-only. The host owns permissions and data/cache roots.
+
+```sh
+npm install               # creates package-lock.json; commit it
+npm ci                    # subsequent reproducible installs
+npm run typecheck
+npm test                  # build, SDK harness, stdio, schema and reload tests
+npm run verify
+npm run dev
+```
+
+Edit `schema.json`: `tools` contain MCP `input_schema` JSON, while `config` and
+`secrets` use manifest-v2 `config.fields` and `config.secrets` shapes verbatim.
+Field defaults are strings, including boolean/numeric defaults. Select fields
+carry `options`; secrets cannot carry defaults. Generation produces tool input
+and config TypeScript types in `src/generated.ts`; tool dispatch validates inputs
+against the same bounded schema subset. Supported tool schemas are closed objects,
+arrays, strings, booleans, numbers, integers and primitive enums; unsupported
+keywords fail generation. Implement handlers in `src/plugin.ts`, using the SDK
+config reader for host-provided strings and resolved credentials. Add tool
+handlers when adding declarations. No legacy ConfigFieldDef is generated.
+
+`plugin.json` is the authoring declaration. Builds create a fresh private
+`.plugin-build/stages/stage-*` directory, bundle directly to `bin/server.js`
+{{ if .inputs.include_ui }}and `ui/index.js` (sandboxed-frame isolation **preference**, subject to host policy){{ end }},
+then use `@hollis-labs/plugin-sdk/build` to inventory bytes/modes, compute the
+specified tree digest, write canonical JSON `plugin.yaml`, and verify the tree.
+The bundled `package.json` fixes ESM classification. No launcher, PATH lookup,
+raw runtime flags or top-level `dist/` bundle layout is used. The latest verified
+stage reference lives outside the payload. Never mutate an accepted stage; remove
+old unused stages only after the host releases them. See the SDK
+[authoring guide](https://github.com/hollis-labs/plugin-sdk/blob/main/docs/ts-plugin-authoring.md)
+for the tree digest and review contract.
+
+Dev mode polls source/schema changes, serially builds a fresh verified stage and
+calls a developer-selected adapter. Copy `reload.example.json` to `reload.json`
+and change its loopback HTTP URL, or use `{"command":["your-host-adapter","reload"]}`
+(no shell; stage path appended as the final argument). HTTP sends
+`{plugin_id,stage,tree_sha256}`. The adapter must adopt the same immutable tree,
+review/verify it and ask the host to reload. This is a configurable seam, **not a
+Nanite endpoint contract**. Failed builds/verification do not call reload.
+Without an adapter dev mode only stages and verifies.
+
+**Live protocol-2 reload remains held until plugin-host lifecycle and host adoption
+land.** Tests use a stub HTTP receiver, not a production host. The SDK dependency
+must support protocol-2 Serve for harness/stdio acceptance; there is no protocol-1
+or legacy-manifest fallback. UI renderer modes are host-owned and remain separate.

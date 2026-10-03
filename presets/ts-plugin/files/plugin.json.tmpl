@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "id": {{ json .inputs.plugin_name }},
+  "name": {{ json .computed.plugin_title }},
+  "description": {{ json .inputs.description }},
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {{ json (printf "https://github.com/%s/%s" .inputs.github_owner .inputs.plugin_name) }},
+  "protocol": 2,
+  "runtime": "subprocess",
+  "server": {"runtime": {{ json .inputs.server_runtime }}, "engines": { {{ json .inputs.server_runtime }}: {"min": {{ if eq .inputs.server_runtime "node" }}"22.0.0"{{ else }}"2.0.0"{{ end }}}}, "entry": "bin/server.js"},
+  {{ if .inputs.include_ui }}"ui": {"bundle": "ui/index.js", "isolation": "sandboxed-frame"},{{ end }}
+  "hosts": { {{ json .inputs.host_name }}: {"min": {{ json .inputs.host_min }}} }
+}

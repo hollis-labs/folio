@@ -1,0 +1,50 @@
+folio_version: "0.1"
+id: ts-plugin
+version: 1.0.0
+description: Protocol-2 bundled TypeScript plugin with schema-first tools and config
+author: hollis-labs
+license: MIT
+inputs:
+  - name: plugin_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Lowercase plugin identity
+  - name: description
+    type: string
+    required: true
+  - name: github_owner
+    type: string
+    default: hollis-labs
+  - name: author
+    type: string
+    default: Hollis Labs
+  - name: sdk_spec
+    type: string
+    default: PROTOCOL_2_RELEASE_REQUIRED
+    description: PLACEHOLDER; replace with the first protocol-2 SDK release or a local tarball
+  - name: server_runtime
+    type: enum
+    values: [deno, node]
+    default: deno
+    description: Deno for untrusted plugins; Node is trusted-only and requires 22+
+  - name: host_name
+    type: string
+    default: nanite
+    pattern: "^[a-z][a-z0-9-]*$"
+  - name: host_min
+    type: string
+    default: 0.1.0
+    description: Inclusive minimum host semver; validated by the SDK at build time
+  - name: include_ui
+    type: bool
+    default: false
+    description: Include a browser bundle with sandboxed-frame isolation preference
+computed:
+  plugin_title: "{{ pascalCase .inputs.plugin_name }}"
+  year: "{{ .now.Year }}"
+files:
+  source: ./files
+  template_suffix: .tmpl
+sync:
+  default: prompt

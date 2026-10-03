@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { once } from 'node:events';
+import { readFile, appendFile, writeFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { stagePlugin } from '../scripts/build.mjs';
+import { reloadStage } from '../scripts/reload.mjs';
+import { verifyBundle } from '@hollis-labs/plugin-sdk/build';
+
+test('build verifies before reload; HTTP stub records immutable stage identity', async () => {
+  const received = [];
+  const server = createServer(async (request,response) => {
+    let body=''; for await (const chunk of request) body += chunk;
+    received.push({method:request.method,body:JSON.parse(body)});
+    response.writeHead(204); response.end();
+  });
+  server.listen(0,'127.0.0.1'); await once(server,'listening');
+  const adapter = {url:`http://127.0.0.1:${server.address().port}/reload`};
+  try {
+    const first = JSON.parse(await readFile('.plugin-build/latest.json','utf8'));
+    const {stage,manifest} = await stagePlugin();
+    assert.notEqual(stage,first.stage);
+    await verifyBundle(first.stage);
+    const payload = await reloadStage(stage,adapter);
+    assert.deepEqual(received,[{method:'POST',body:payload}]);
+    assert.equal(payload.tree_sha256,manifest.artifact.tree_sha256);
+    await appendFile(join(stage,'bin/server.js'),'\n// tampered\n');
+    await assert.rejects(reloadStage(stage,adapter));
+    await rm(stage,{recursive:true});
+    await writeFile('.plugin-build/latest.json',JSON.stringify(first)+'\n');
+    assert.equal(received.length,1);
+    await assert.rejects(reloadStage(first.stage,{url:'https://example.com/reload'}),/loopback/);
+  } finally { await new Promise(resolve => server.close(resolve)); }
+});

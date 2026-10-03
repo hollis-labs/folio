@@ -1,0 +1,24 @@
+import { spawn } from 'node:child_process';
+import { verifyBundle } from '@hollis-labs/plugin-sdk/build';
+
+// This is a developer adapter seam, not an implemented host API contract.
+// A host must adopt/copy the immutable stage, validate it, then reload it.
+export async function reloadStage(stage, adapter = {}) {
+  const manifest = await verifyBundle(stage);
+  const payload = {plugin_id:manifest.id,stage,tree_sha256:manifest.artifact.tree_sha256};
+  if (adapter.url && adapter.command) throw new Error('Choose one reload adapter');
+  if (adapter.url) {
+    const url = new URL(adapter.url);
+    if (url.protocol !== 'http:' || !['127.0.0.1','[::1]','localhost'].includes(url.hostname) || url.username || url.password) throw new Error('Reload URL must be unauthenticated loopback HTTP');
+    const response = await fetch(url,{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});
+    await response.body?.cancel();
+    if (!response.ok) throw new Error(`Reload refused: ${response.status}`);
+  } else if (adapter.command) {
+    if (!Array.isArray(adapter.command) || !adapter.command.length || adapter.command.some(s => typeof s !== 'string' || !s)) throw new Error('Reload command must be a nonempty argv array');
+    await new Promise((resolve,reject) => {
+      const child = spawn(adapter.command[0],[...adapter.command.slice(1),stage],{stdio:'inherit',shell:false});
+      child.on('error',reject); child.on('exit',code => code === 0 ? resolve() : reject(new Error(`Reload exited ${code}`)));
+    });
+  } else console.log('Stage verified; reload adapter is unconfigured (host v2 adoption pending)');
+  return payload;
+}

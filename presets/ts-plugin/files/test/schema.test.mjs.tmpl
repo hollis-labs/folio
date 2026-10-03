@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { generate, check } from '../scripts/schema.mjs';
+test('one source supplies tool schemas, manifest config and author types', () => {
+  const input = {tools:[{name:'echo',description:'echo',effect:'read',input_schema:{type:'object',properties:{text:{type:'string'},tags:{type:'array',items:{type:'string'}}},required:['text'],additionalProperties:false}}],config:{enabled:{type:'boolean',default:'false'},kind:{type:'select',options:['a','b']}},secrets:{credential:{required:true}}};
+  const out = generate(input);
+  assert.deepEqual(out.tools,input.tools);
+  assert.deepEqual(out.config,{fields:input.config,secrets:input.secrets});
+  assert.match(out.code,/"text": string/);
+  assert.match(out.code,/"enabled"\?: boolean/);
+  check(input.tools[0].input_schema,{text:'hello',tags:['x']});
+  assert.throws(() => check(input.tools[0].input_schema,{text:2}));
+  assert.throws(() => check(input.tools[0].input_schema,{text:'hello',extra:true}));
+  assert.throws(() => generate({...input,tools:[{...input.tools[0],input_schema:{type:'string',pattern:'x'}}]}),/Unsupported/);
+  assert.throws(() => generate({...input,tools:[input.tools[0],input.tools[0]]}),/duplicate/);
+});
