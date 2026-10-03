@@ -1,0 +1,65 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+
+const token = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+const primitive = {string:'string',boolean:'boolean',integer:'number',number:'number'};
+// Deliberately bounded JSON Schema subset. Unsupported keywords fail instead of
+// silently changing the runtime/schema/type contract.
+export function schemaType(s) {
+  if (!s || typeof s !== 'object' || Array.isArray(s)) throw new Error('Schema must be an object');
+  const allowed = ['type','description', ...(s.type === 'object' ? ['properties','required','additionalProperties'] : s.type === 'array' ? ['items'] : ['enum'])];
+  if (Object.keys(s).some(k => !allowed.includes(k))) throw new Error('Unsupported schema keyword');
+  if (s.enum !== undefined) {
+    if (!primitive[s.type] || !Array.isArray(s.enum) || !s.enum.length || s.enum.some(v => !matchesPrimitive(s.type,v))) throw new Error('Invalid enum');
+    return s.enum.map(v => JSON.stringify(v)).join(' | ');
+  }
+  if (primitive[s.type]) return primitive[s.type];
+  if (s.type === 'array') return `Array<${schemaType(s.items)}>`;
+  if (s.type === 'object') {
+    if (s.additionalProperties !== false || !s.properties || Array.isArray(s.properties)) throw new Error('Objects must declare closed properties');
+    const required = s.required ?? [];
+    if (!Array.isArray(required) || required.some(k => !Object.hasOwn(s.properties,k)) || new Set(required).size !== required.length) throw new Error('Invalid required fields');
+    return `{ ${Object.entries(s.properties).map(([k,v]) => `${JSON.stringify(k)}${required.includes(k)?'':'?'}: ${schemaType(v)}`).join('; ')} }`;
+  }
+  throw new Error(`Unsupported schema type: ${s.type}`);
+}
+function matchesPrimitive(type,v) {
+  return type === 'integer' ? Number.isSafeInteger(v) : type === 'number' ? typeof v === 'number' && Number.isFinite(v) : typeof v === type;
+}
+export function check(s, v) {
+  if (s.enum && !s.enum.includes(v)) throw new Error('Value is outside enum');
+  if (primitive[s.type]) { if (!matchesPrimitive(s.type,v)) throw new Error(`Expected ${s.type}`); return; }
+  if (s.type === 'array') { if (!Array.isArray(v)) throw new Error('Expected array'); for (const item of v) check(s.items,item); return; }
+  if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Expected object');
+  if (Object.keys(v).some(k => !Object.hasOwn(s.properties,k))) throw new Error('Unknown input field');
+  for (const key of s.required ?? []) if (!Object.hasOwn(v,key)) throw new Error(`Missing ${key}`);
+  for (const [key,value] of Object.entries(v)) check(s.properties[key],value);
+}
+export function generate(source) {
+  if (Object.keys(source).some(k => !['tools','config','secrets'].includes(k))) throw new Error('Unknown authoring schema field');
+  const tools = source.tools ?? [];
+  const names = new Set();
+  const types = [];
+  for (const tool of tools) {
+    if (!token.test(tool.name) || names.has(tool.name)) throw new Error('Invalid/duplicate tool name');
+    names.add(tool.name); types.push(`${JSON.stringify(tool.name)}: ${schemaType(tool.input_schema)}`);
+  }
+  // Config and secrets use the manifest package shape verbatim. The SDK build
+  // helper validates declarations; config is not a separate legacy DTO.
+  const config = {fields:source.config ?? {}, secrets:source.secrets ?? {}};
+  const configTypes = Object.entries(config.fields).map(([name,f]) => {
+    if (!token.test(name) || !['string','boolean','integer','number','select'].includes(f.type)) throw new Error('Invalid config field');
+    const type = f.type === 'select' ? (f.options ?? []).map(v => JSON.stringify(v)).join(' | ') : primitive[f.type];
+    if (!type) throw new Error('Select needs options');
+    return `${JSON.stringify(name)}${f.required?'':'?'}: ${type}`;
+  });
+  const runtimeCheck = `${matchesPrimitive.toString()}\nconst primitive = ${JSON.stringify(primitive)};\n${check.toString()}`;
+  return {tools,config,code: `// Generated from schema.json; edit the source.\nexport interface ToolInputs { ${types.join('; ')} }\nexport interface PluginConfig { ${configTypes.join('; ')} }\nconst schemas: Record<string, any> = JSON.parse(${JSON.stringify(JSON.stringify(Object.fromEntries(tools.map(t => [t.name,t.input_schema]))))});\n// Runtime validation shares the generator's bounded subset.\n${runtimeCheck.replace('const primitive =', 'const primitive: Record<string,string> =').replace('function matchesPrimitive(type,v)','function matchesPrimitive(type: string,v: any)').replace('function check(s, v)','function check(s: any, v: any)')}\nexport function validateInput(name: string, value: unknown): void { const schema = schemas[name]; if (!schema) throw new Error('Unknown tool'); check(schema,value); }\n`};
+}
+export async function generateFiles() {
+  const result = generate(JSON.parse(await readFile('schema.json','utf8')));
+  await mkdir('src',{recursive:true});
+  await writeFile('src/generated.ts',result.code);
+  return result;
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await generateFiles();

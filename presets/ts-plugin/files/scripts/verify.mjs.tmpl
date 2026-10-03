@@ -1,0 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { verifyBundle } from '@hollis-labs/plugin-sdk/build';
+const latest = JSON.parse(await readFile('.plugin-build/latest.json','utf8'));
+const manifest = await verifyBundle(latest.stage);
+if (manifest.artifact.tree_sha256 !== latest.tree_sha256) throw new Error('Stage reference mismatch');
+console.log(`Verified ${manifest.id}: ${latest.tree_sha256}`);

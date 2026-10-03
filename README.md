@@ -47,6 +47,23 @@ Drop `--non-interactive` to be prompted for any inputs you didn't supply on
 the command line. Drop the `--input` flags entirely and folio will prompt
 for everything required.
 
+## TypeScript plugin authoring
+
+Render `ts-plugin` with `plugin_name`, `description`, and `sdk_spec` pointing to a
+protocol-2 SDK release or local tarball. SDK main implements Serve v2; this
+is not a release. The default SDK spec remains an explicit placeholder until a
+protocol-2 release exists. Build a local main tarball and verify its exported
+`PROTOCOL_VERSION` is 2; the generated README gives the commands. Optional `include_ui=true` adds a browser bundle. Generated projects
+use schema-first tool/config types, esbuild and the shared SDK artifact helper.
+The generated README explains harness tests and the configurable dev reload seam;
+live host reload waits on protocol-2 lifecycle adoption.
+
+```sh
+folio new ts-plugin ./echo-plugin --non-interactive \
+  --input plugin_name=echo-plugin --input description="Echo tools" \
+  --input sdk_spec=file:/path/to/plugin-sdk.tgz
+```
+
 ## Commands
 
 | Command | What it does |

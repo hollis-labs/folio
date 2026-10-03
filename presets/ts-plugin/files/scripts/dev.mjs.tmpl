@@ -1,0 +1,26 @@
+import { readdir, stat, readFile } from 'node:fs/promises';
+import { stagePlugin } from './build.mjs';
+import { reloadStage } from './reload.mjs';
+// Poll only authoring sources. Builds run serially; an edit during a build is
+// seen on the next poll. A failed build never reaches the reload adapter.
+async function fingerprint(path) {
+  try {
+    const info = await stat(path);
+    if (!info.isDirectory()) return `${path}:${info.mtimeMs}:${info.size}`;
+    return (await Promise.all((await readdir(path)).filter(name => name !== 'generated.ts').sort().map(name => fingerprint(`${path}/${name}`)))).join('|');
+  } catch (error) { if (error.code === 'ENOENT') return ''; throw error; }
+}
+let previous = '';
+while (true) {
+  const current = (await Promise.all(['src','schema.json','plugin.json','ui'].map(fingerprint))).join('|');
+  if (current !== previous) {
+    previous = current;
+    try {
+      let adapter = {};
+      try { adapter = JSON.parse(await readFile('reload.json','utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      const {stage} = await stagePlugin();
+      await reloadStage(stage,adapter);
+    } catch (error) { console.error(error.message); }
+  }
+  await new Promise(resolve => setTimeout(resolve,500));
+}

@@ -1,0 +1,8 @@
+{{- if .inputs.include_ui -}}
+// A browser entrypoint; the host supplies the renderer and decides isolation.
+export function mount(container: HTMLElement): void {
+  const title = document.createElement('h2');
+  title.textContent = {{ json .computed.plugin_title }};
+  container.append(title);
+}
+{{- end }}

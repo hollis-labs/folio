@@ -1,0 +1,30 @@
+import { build } from 'esbuild';
+import { writeManifest, verifyBundle } from '@hollis-labs/plugin-sdk/build';
+import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { resolve, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { generateFiles } from './schema.mjs';
+
+export async function stagePlugin() {
+  const schema = await generateFiles();
+  const declaration = JSON.parse(await readFile('plugin.json','utf8'));
+  declaration.tools = schema.tools;
+  declaration.config = schema.config;
+  await mkdir('.plugin-build/stages',{recursive:true,mode:0o700});
+  const stage = await mkdtemp(resolve('.plugin-build/stages/stage-'));
+  try {
+    const common = {bundle:true,format:'esm',target:'node22',logLevel:'warning'};
+    await build({...common,platform:'node',entryPoints:['src/server.ts'],outfile:join(stage,'bin/server.js')});
+    // ESM classification travels with the bundle, independent of its parent.
+    await writeFile(join(stage,'package.json'),'{' + '"type":"module"' + '}\n');
+    if (declaration.ui) await build({...common,platform:'browser',entryPoints:['ui/index.ts'],outfile:join(stage,'ui/index.js')});
+    const manifest = await writeManifest(stage,declaration);
+    await verifyBundle(stage,manifest);
+    await writeFile('.plugin-build/latest.json',JSON.stringify({stage,tree_sha256:manifest.artifact.tree_sha256})+'\n');
+    return {stage,manifest};
+  } catch (error) { await rm(stage,{recursive:true,force:true}); throw error; }
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const {manifest} = await stagePlugin();
+  console.log(`Staged ${manifest.id}: ${manifest.artifact.tree_sha256}`);
+}

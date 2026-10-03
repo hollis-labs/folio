@@ -8,6 +8,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `ts-plugin` scaffolds protocol-2 TypeScript workers with optional UI, one source
+  for MCP input schemas / manifest-v2 config / TS types, immutable esbuild stages
+  and the shared SDK artifact helper. SDK harness/stdio tests and a loopback HTTP
+  reload stub exercise generated projects. The SDK release spec is a placeholder;
+  live host reload remains pending protocol-2 lifecycle adoption.
+
 - **`chat-app` 1.0.0** scaffolds a chat-first app on published design-kit and
   kit-chat: AppShell/sidebar, host-owned transcript/draft, ChatStream/ChatInput,
   explicit source registration, same-origin runtime API/context and a Go echo

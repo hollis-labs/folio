@@ -1,0 +1,53 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { build } from 'esbuild';
+import { createHarness } from '@hollis-labs/plugin-sdk/test';
+import { PROTOCOL_VERSION } from '@hollis-labs/plugin-sdk';
+import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+import { join, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
+import { createInterface } from 'node:readline';
+import { once } from 'node:events';
+
+// A protocol-1 SDK must fail acceptance; never silently skip or fall back.
+test('protocol-2 SDK harness runs init, load, tools and unload', async () => {
+  assert.equal(Number(PROTOCOL_VERSION),2,'Install a protocol-2 SDK; Serve v2 is required');
+  await build({entryPoints:['src/plugin.ts'],bundle:true,platform:'node',format:'esm',target:'node22',outfile:'.plugin-build/test-plugin.js'});
+  const {plugin} = await import(pathToFileURL(resolve('.plugin-build/test-plugin.js')).href);
+  const harness = await createHarness(plugin,{hostInfo:{version:'0.1.0',protocol:2},config:{greeting:'Hi'},jsonRoundtrip:true});
+  try {
+    assert.equal((await harness.init()).protocol,2);
+    await harness.load();
+    assert.deepEqual((await harness.mcp({tool_name:'echo',arguments:{text:'world'}})).content,[{type:'text',text:'Hi, world'}]);
+    await assert.rejects(harness.mcp({tool_name:'echo',arguments:{text:2}}));
+    await harness.unload();
+  } finally { await harness.close(); }
+});
+
+test('staged worker speaks protocol 2 over stdio', {timeout:15000}, async () => {
+  assert.equal(Number(PROTOCOL_VERSION),2);
+  const {stage} = JSON.parse(await readFile('.plugin-build/latest.json','utf8'));
+  const child = spawn(process.execPath,[join(stage,'bin/server.js')],{stdio:['pipe','pipe','pipe']});
+  const lines = createInterface({input:child.stdout});
+  let stderr = ''; child.stderr.on('data',b => { stderr += b; });
+  let id = 0;
+  const waiting = new Map();
+  lines.on('line',line => { const message = JSON.parse(line); const waiter = waiting.get(message.id); if (waiter) { waiting.delete(message.id); message.error ? waiter.reject(new Error(JSON.stringify(message.error))) : waiter.resolve(message.result); } });
+  child.on('exit',code => { for (const w of waiting.values()) w.reject(new Error(`Worker exited ${code}: ${stderr}`)); waiting.clear(); });
+  const rpc = (method,params) => new Promise((resolve,reject) => {
+    const current = ++id;
+    const timer = setTimeout(() => { waiting.delete(current); reject(new Error(`RPC timeout: ${method}`)); },5000);
+    waiting.set(current,{resolve:value => {clearTimeout(timer);resolve(value);},reject:error => {clearTimeout(timer);reject(error);}});
+    child.stdin.write(JSON.stringify({jsonrpc:'2.0',id:current,method,params})+'\n');
+  });
+  try {
+    const initialized = await rpc('plugin/init',{plugin_dir:stage,data_dir:stage,cache_dir:stage,config:{greeting:'Hi'},log_level:'info',host_info:{version:'0.1.0',protocol:2},capability_contract:1,incarnation:{host_instance:'test-host',owner_id:'test-owner',owner_generation:1},grants:[]});
+    assert.equal(initialized.protocol,2);
+    await rpc('plugin/load',{});
+    const result = await rpc('mcp/call_tool',{tool_name:'echo',arguments:{text:'stdio'}});
+    assert.deepEqual(result.content,[{type:'text',text:'Hi, stdio'}]);
+    const exited = once(child,'exit'); child.stdin.end(); await exited;
+    assert.equal(child.exitCode,0,stderr);
+  } finally { lines.close(); child.kill(); }
+});

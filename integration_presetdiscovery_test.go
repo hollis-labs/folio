@@ -25,6 +25,7 @@ var allPresetInputs = map[string]map[string]any{
 	"go-baseline":    {"repo_name": "go-smoke"},
 	"go-lib":         {"repo_name": "go-smoke-lib", "package_name": "smoke", "description": "d"},
 	"go-service-app": {"repo_name": "svc-app", "store_pkg_name": "store", "store_type": "Store"},
+	"ts-plugin":      {"plugin_name": "minimal", "description": "d"},
 	"nanite-plugin":  {"plugin_name": "minimal", "github_owner": "hollis-labs", "description": "d"},
 	"chat-app":       {"project_name": "acme_chat", "github_owner": "hollis-labs", "description": "d"},
 	"app-dashboard":  {"project_name": "acme_sysop", "github_owner": "hollis-labs", "description": "d"},

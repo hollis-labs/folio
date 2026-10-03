@@ -1,0 +1,20 @@
+import { PROTOCOL_VERSION, type ServerPlugin } from '@hollis-labs/plugin-sdk';
+import { validateInput, type ToolInputs } from './generated.js';
+
+export const plugin: ServerPlugin = {
+  init(_context, params) {
+    if (Number(PROTOCOL_VERSION) !== 2 || params.host_info.protocol !== 2) {
+      throw new Error('This plugin requires a protocol-2 SDK and host');
+    }
+    return {id: {{ json .inputs.plugin_name }}, name: {{ json .computed.plugin_title }}, version: '0.1.0', description: {{ json .inputs.description }}, protocol: 2, capability_contract: 1};
+  },
+  load() { return {}; },
+  unload() {},
+  mcpCallTool(context, params) {
+    if (params.tool_name !== 'echo') throw new Error(`Unknown tool: ${params.tool_name}`);
+    validateInput(params.tool_name, params.arguments);
+    const input = params.arguments as ToolInputs['echo'];
+    const greeting = context.config.string('greeting') || 'Hello';
+    return {content: [{type: 'text', text: `${greeting}, ${input.text}`} ]};
+  },
+};
