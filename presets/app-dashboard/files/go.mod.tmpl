@@ -1,5 +1,13 @@
+{{ if eq .inputs.gui_host "chimera" -}}
+module {{ .computed.module_path }}
+
+go {{ .inputs.go_version }}
+
+require github.com/hollis-labs/chimera {{ .inputs.chimera_version }}
+{{ else -}}
 module {{ .computed.module_path }}
 
 go {{ .inputs.go_version }}
 
 require github.com/hollis-labs/go-webui {{ .inputs.go_webui_version }}
+{{ end -}}

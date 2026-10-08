@@ -24,7 +24,7 @@ jobs:
       - name: Build and lint the dashboard (including design tokens)
         working-directory: frontend
         run: |
-          npm install
+          {{ if eq .inputs.gui_host "chimera" }}npm ci{{ else }}npm install{{ end }}
           npm run typecheck
           npm run lint
           npm run build

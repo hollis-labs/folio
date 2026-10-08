@@ -8,6 +8,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Opt-in maintained Chimera host for `app-dashboard` 2.1.0 and `chat-app` 1.1.0,
+  preserving default go-webui outputs and APIs. Fixed public Go/GUI recipe inputs,
+  reproducible frontend locks, root/subpath serving and readonly breadcrumb proof.
+- Explicit licensed `chimera-plugin-fixture` composition layer and two app wrappers
+  carrying the unchanged reviewed archive/four source adapters and raw provenance.
+  Native widget/CSS lease and local echo proofs are explicit maintainer gates;
+  rendering still performs no install, build, run, publication or plugin mutation.
+
 - `ts-plugin` scaffolds protocol-2 TypeScript workers with optional UI, one source
   for MCP input schemas / manifest-v2 config / TS types, immutable esbuild stages
   and the shared SDK artifact helper. SDK harness/stdio tests and a loopback HTTP

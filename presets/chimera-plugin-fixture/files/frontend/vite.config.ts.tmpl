@@ -1,0 +1,28 @@
+import { pluginHostImportmap } from "@hollis-labs/plugin-host-ui/vite"
+import tailwindcss from "@tailwindcss/vite"
+import { defineConfig } from "vite"
+export default defineConfig({
+  base: {{ quote (printf "%s/" (trimSuffix "/" .inputs.base_path)) }},
+  plugins: [
+    tailwindcss(),
+    pluginHostImportmap({
+      entries: [
+        {
+          specifier: "react",
+          source: "react",
+          exports: ["createElement", "useState", "useSyncExternalStore", "version"],
+          defaultExport: true,
+        },
+        { specifier: "@recipe/ui", source: "@hollis-labs/design-components", exports: ["Button"] },
+        {
+          specifier: "react/jsx-runtime",
+          source: "react/jsx-runtime",
+          exports: ["Fragment", "jsx", "jsxs"],
+        },
+      ],
+    }),
+  ],
+  esbuild: { jsx: "automatic" },
+  build: { outDir: "../internal/webui/dist", emptyOutDir: true },
+  server: { proxy: { "/api": "http://127.0.0.1:8080", "/plugins": "http://127.0.0.1:8080" } },
+})

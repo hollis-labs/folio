@@ -1,3 +1,67 @@
+{{ if eq .inputs.gui_host "chimera" -}}
+// Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} chat UI.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
+	"{{ .computed.module_path }}/internal/webui"
+)
+
+func main() {
+	addr := os.Getenv("LISTEN_ADDR")
+	if addr == "" {
+		addr = "127.0.0.1:8080"
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+	// A local echo makes the scaffold usable without an agent service or secrets.
+	// Replace this handler with the application's real chat transport.
+	mux.HandleFunc("POST /api/messages", func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			Message string `json:"message"`
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			http.Error(w, "invalid message", http.StatusBadRequest)
+			return
+		}
+		message := strings.TrimSpace(request.Message)
+		if message == "" {
+			http.Error(w, "message must not be empty", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"reply": "Echo: " + message})
+	})
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	h, err := webui.New(mux)
+	if err != nil {
+		log.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("{{ .computed.app_title }} listening on %s; UI base %s", listener.Addr(), webui.BasePath)
+	if err := h.Serve(ctx, listener); err != nil {
+		log.Fatal(err)
+	}
+
+}
+{{ else -}}
 // Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} chat UI.
 package main
 
@@ -46,3 +110,4 @@ func main() {
 		log.Fatal(err)
 	}
 }
+{{ end -}}

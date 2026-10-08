@@ -26,3 +26,11 @@ Thumbs.db
 # Local config
 .env
 .env.local
+
+# Repo-local proof caches and generated consumers
+.scratch/
+
+# Licensed immutable opt-in source templates are distribution inputs.
+!presets/chimera-plugin-fixture/files/frontend/src/vendor/
+!presets/chimera-plugin-fixture/files/frontend/src/vendor/chimera/
+!presets/chimera-plugin-fixture/files/frontend/src/vendor/chimera/**

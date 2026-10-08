@@ -1,0 +1,94 @@
+folio_version: "0.1"
+id: app-dashboard-chimera-plugin
+version: 1.0.0
+description: Explicit dashboard Chimera consumer with one reviewed licensed local widget fixture
+author: hollis-labs
+license: MIT
+composes:
+  - id: app-dashboard
+    version: ">=2.0,<3.0"
+    source: local
+    path: ../app-dashboard
+    vars:
+      gui_host: chimera
+  - id: chimera-plugin-fixture
+    version: ">=1.0,<2.0"
+    source: local
+    path: ../chimera-plugin-fixture
+    vars:
+      plugin_kind: dashboard
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+    description: Go module + binary name (lowercase, snake_case)
+
+  - name: github_owner
+    type: string
+    required: true
+    default: hollis-labs
+    description: GitHub org or user that hosts the project repo
+
+  - name: description
+    type: string
+    default: ""
+    description: One-line project description
+
+  - name: base_path
+    type: string
+    pattern: "^(/|(/[A-Za-z0-9_-]+)+)$"
+    default: /sysop
+    description: URL path the dashboard is mounted at — leading slash, no trailing slash (e.g. /sysop)
+
+  - name: gui_host
+    type: enum
+    values: [chimera]
+    default: chimera
+    description: Maintained host opt-in; chimera uses an independently frozen published GUI lock, not design_kit_version ranges
+
+  - name: chimera_version
+    type: enum
+    values: [v0.0.0-20261008115211-389155313ee5]
+    default: v0.0.0-20261008115211-389155313ee5
+    description: Fixed maintained public host revision for the explicit chimera branch
+
+  - name: chimera_gui_recipe
+    type: enum
+    values: [design-0.4.0-react-19.3.0]
+    default: design-0.4.0-react-19.3.0
+    description: Fixed published dependency contract recorded with the exact frontend lock
+
+  - name: design_kit_version
+    type: string
+    default: "0.4.0"
+    pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: Legacy go-webui branch package version; chimera uses the explicit frozen chimera_gui_recipe
+
+  - name: go_webui_version
+    type: string
+    default: v0.1.0
+    pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
+    description: Legacy go-webui branch module version; chimera uses the explicit chimera_version
+
+  - name: go_version
+    type: string
+    default: "1.26.6"
+    pattern: "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    description: >-
+      Go language version. Renders into go.mod, the CI workflow and
+      golangci-lint's `go:` key from one input so the three cannot drift.
+      The default is the portfolio floor (go 1.26.6): govulncheck judges the
+      stdlib by go.mod's `go` line, so a lower floor reports fixed advisories.
+
+  - name: go_packages
+    type: string
+    default: "./..."
+    description: >-
+      Package pattern the lefthook go-vet and go-test hooks run against.
+      Override for repos where `./...` pulls in trees that should not gate a
+      commit.
+
+files:
+  source: ./files
+  template_suffix: .tmpl

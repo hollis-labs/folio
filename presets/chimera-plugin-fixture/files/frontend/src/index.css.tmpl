@@ -1,0 +1,17 @@
+@import "tailwindcss";
+{{ if eq .inputs.plugin_kind "dashboard" }}@import "@hollis-labs/kit-dashboard/theme.css";{{ else }}@import "@hollis-labs/design-tokens/design-tokens.css";
+@import "@hollis-labs/design-components/source.css";
+@import "@hollis-labs/kit-chat/source.css";{{ end }}
+@import "@hollis-labs/plugin-host-ui/source.css";
+@import "@hollis-labs/design-app-runtime/shell-reset.css";
+@source "../../internal/webui/fixture/bundle.js";
+
+.folio-plugin {
+  padding: calc(var(--spacing) * 2);
+  min-width: 0;
+  flex-shrink: 0;
+}
+.folio-plugin p {
+  font-size: var(--text-caption);
+  overflow-wrap: anywhere;
+}

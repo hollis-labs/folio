@@ -1,3 +1,62 @@
+{{ if eq .inputs.gui_host "chimera" -}}
+# {{ .computed.app_title }}
+{{ if .inputs.description }}{{ .inputs.description }}{{ end }}
+
+This explicit `gui_host=chimera` scaffold imports the maintained public Go host
+`github.com/hollis-labs/chimera {{ .inputs.chimera_version }}`. Folio renders thin
+wiring; there is no copied host implementation, replace directive or go.work.
+The original frontend and app-owned API remain in this project.
+
+## Reproducible dependencies
+
+- Go {{ .inputs.go_version }} (the canonical portfolio floor).
+- Node 22.12+ and npm, compatible with the pinned Vite 7.3.6.
+- `chimera_gui_recipe={{ .inputs.chimera_gui_recipe }}`: published design packages 0.4.0,
+  React/ReactDOM 19.3.0 and the exact committed frontend lock/integrities.
+- The shared runtime/build lock entries are the reviewed Chimera389 closure;
+  the Folio starter adds its existing published kit and lint-tool dependencies.
+  Both root lock names are templated with the project name.
+
+`design_kit_version` and `go_webui_version` configure only the legacy `go-webui`
+branch. This branch uses the explicit fixed enum pins above, also recorded in
+`.folio.yaml` and `chimera-provenance.json`. An upgrade is a separately reviewed
+preset change with a new compatible lock, never a silent npm resolution.
+
+## Explicit build and run
+
+```sh
+cd frontend
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+cd ..
+go mod tidy
+go test ./...
+go build -o {{ .inputs.project_name }} ./cmd/{{ .inputs.project_name }}
+./{{ .inputs.project_name }}
+```
+
+Folio itself performs none of these install/build/run operations. The frontend
+build writes into `internal/webui/dist`; the server embeds those bytes and
+imports Chimera directly. Full MIT terms are in `licenses/Chimera-MIT.txt`.
+
+GUI base: `{{ .inputs.base_path }}`. Browser URL:
+<http://127.0.0.1:8080{{ trimSuffix "/" .inputs.base_path }}/>. Root `/` stays `/`,
+not `//`. Deep local routes reload through the same embedded SPA; assets use
+that canonical base. Reserved host bases `/api`, `/plugins` and `/healthz` are
+refused by Chimera. APIs remain at root `/api/health`.
+
+`LISTEN_ADDR` defaults to loopback 127.0.0.1:8080. Override it explicitly if needed;
+update Vite's API proxy if changing the development port. `make ui-dev` runs
+Vite separately, proxying the app's root `/api`. Ctrl+C/SIGTERM drains the
+maintained HTTP host. Missing `/api` routes return 404 rather than SPA content.
+
+The renderer preserves atomic materialization, LF-normalized breadcrumb file
+digests and read-only `folio inspect` drift reporting. `folio sync` remains an
+erroring stub. No publication, install/enable, persistence or business policy is
+provided by this shell recipe.
+{{ else -}}
 # {{ .computed.app_title }}
 {{ if .inputs.description }}
 {{ .inputs.description }}
@@ -92,3 +151,4 @@ Existing generated apps keep their dependencies until intentionally updated.
 ## License
 
 MIT — see [LICENSE](./LICENSE).
+{{ end -}}

@@ -78,3 +78,34 @@ jobs:
 
       - name: drift check positive control
         run: sh scripts/check-platform-pins-drift.sh . --self-test
+
+  chimera-consumers:
+    name: generated Chimera consumers
+    runs-on: ubuntu-latest
+    env:
+      TMPDIR: ${{ github.workspace }}/.scratch/tmp
+      GOCACHE: ${{ github.workspace }}/.scratch/gocache
+      GOMODCACHE: ${{ github.workspace }}/.scratch/gomodcache
+      npm_config_cache: ${{ github.workspace }}/.scratch/npmcache
+    steps:
+      - uses: actions/checkout@v5
+      - name: Prepare owned proof directories
+        run: mkdir -p .scratch/tmp .scratch/gocache .scratch/gomodcache .scratch/npmcache .scratch/browsers
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+      - name: Install exact isolated native-proof tool
+        run: |
+          mkdir -p .scratch/tmp .scratch/gocache .scratch/gomodcache .scratch/npmcache .scratch/browsers
+          npm install --prefix .scratch/native-tools --no-audit --no-fund @playwright/test@1.63.0
+          PLAYWRIGHT_BROWSERS_PATH="$PWD/.scratch/browsers" .scratch/native-tools/node_modules/.bin/playwright install --with-deps chromium
+      - name: Prove shell and explicit licensed plugin consumers
+        env:
+          FOLIO_PLAYWRIGHT_MODULE: ${{ github.workspace }}/.scratch/native-tools/node_modules/@playwright/test
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.scratch/browsers
+        run: |
+          node scripts/check-chimera-consumers.cjs
+          FOLIO_PROOF_VARIANT=plugin node scripts/check-chimera-consumers.cjs

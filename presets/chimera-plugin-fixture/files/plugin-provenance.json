@@ -1,0 +1,37 @@
+{
+  "schema": "folio-chimera-plugin/v1",
+  "baseline": "389155313ee5b95f4125e64b61077ddf4257e3d6",
+  "recipe": "1201957826677c535ba5d8c9ede100c2f1a4cde8",
+  "policy": "Explicit reviewed immutable main-origin local widget; no sandbox, business actions or published frontend adapter package claim",
+  "adapters": [
+    {
+      "source": "frontend/src/composition.ts",
+      "local": "frontend/src/vendor/chimera/composition.ts",
+      "sha256": "db9a53ae595a4a45d7a5fdd10094c73b5d078a6b04365306e336bcc407987ca2"
+    },
+    {
+      "source": "frontend/src/runtime.ts",
+      "local": "frontend/src/vendor/chimera/runtime.ts",
+      "sha256": "f2501b3936962a3f7f8a9ff5492700b72fbfe67cf98f5b01912bbed0cd043a8e"
+    },
+    {
+      "source": "frontend/src/store.ts",
+      "local": "frontend/src/vendor/chimera/store.ts",
+      "sha256": "206d8b6e051b69231bbcfdceae422c344cd4a940f6e16cfe87c0dd8955774c0c"
+    },
+    {
+      "source": "frontend/src/stylesheets.ts",
+      "local": "frontend/src/vendor/chimera/stylesheets.ts",
+      "sha256": "a26c9c1910fd0ba17e5d7202ff874d3cdb7b92606fae9349be6fd9e662e0ba4a"
+    }
+  ],
+  "archives": [
+    {
+      "path": "third_party/hollis-labs-plugin-host-ui-0.1.0.tgz",
+      "sha256": "360c4bd74df7369d57af74151bba0ff0739b31b5c67499f1c01c15cefb4b24b0",
+      "source": "design-kit dbcf4fa7f5bcfe83686d227b39ddf9426cea4fe5",
+      "license": "MIT full terms carried",
+      "packaging": "Runtime/CSS unchanged; reviewed standalone tsconfig adaptation. Not an npm release."
+    }
+  ]
+}

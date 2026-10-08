@@ -20,15 +20,18 @@ import (
 // preset is added without one, so the render-invariance test below cannot
 // silently skip it.
 var allPresetInputs = map[string]map[string]any{
-	"base":           {"project_name": "smoke", "github_owner": "chrispian", "description": "x"},
-	"go-package":     {"project_name": "smoke", "github_owner": "chrispian", "package_name": "greeter"},
-	"go-baseline":    {"repo_name": "go-smoke"},
-	"go-lib":         {"repo_name": "go-smoke-lib", "package_name": "smoke", "description": "d"},
-	"go-service-app": {"repo_name": "svc-app", "store_pkg_name": "store", "store_type": "Store"},
-	"ts-plugin":      {"plugin_name": "minimal", "description": "d"},
-	"nanite-plugin":  {"plugin_name": "minimal", "github_owner": "hollis-labs", "description": "d"},
-	"chat-app":       {"project_name": "acme_chat", "github_owner": "hollis-labs", "description": "d"},
-	"app-dashboard":  {"project_name": "acme_sysop", "github_owner": "hollis-labs", "description": "d"},
+	"base":                         {"project_name": "smoke", "github_owner": "chrispian", "description": "x"},
+	"go-package":                   {"project_name": "smoke", "github_owner": "chrispian", "package_name": "greeter"},
+	"go-baseline":                  {"repo_name": "go-smoke"},
+	"chimera-plugin-fixture":       {"project_name": "fixture"},
+	"app-dashboard-chimera-plugin": {"project_name": "dashboard_plugin", "github_owner": "hollis-labs"},
+	"chat-app-chimera-plugin":      {"project_name": "chat_plugin", "github_owner": "hollis-labs"},
+	"go-lib":                       {"repo_name": "go-smoke-lib", "package_name": "smoke", "description": "d"},
+	"go-service-app":               {"repo_name": "svc-app", "store_pkg_name": "store", "store_type": "Store"},
+	"ts-plugin":                    {"plugin_name": "minimal", "description": "d"},
+	"nanite-plugin":                {"plugin_name": "minimal", "github_owner": "hollis-labs", "description": "d"},
+	"chat-app":                     {"project_name": "acme_chat", "github_owner": "hollis-labs", "description": "d"},
+	"app-dashboard":                {"project_name": "acme_sysop", "github_owner": "hollis-labs", "description": "d"},
 }
 
 func bundledIDs(t *testing.T) []string {
@@ -49,7 +52,7 @@ func bundledIDs(t *testing.T) []string {
 
 // TestPresetDiscovery_ListMatchesEmbeddedPresets is the drift guard the README
 // table never had: ListPresets over the real compiled embed.FS must name
-// exactly the preset directories that ship, and mark only go-baseline as a
+// exactly the preset directories that ship, and mark the declared compose-only presets as a
 // layer.
 func TestPresetDiscovery_ListMatchesEmbeddedPresets(t *testing.T) {
 	svc := service.New(service.Options{BundledFS: folio.BundledPresets, BundledRoot: "presets", UserDir: t.TempDir()})
@@ -66,7 +69,7 @@ func TestPresetDiscovery_ListMatchesEmbeddedPresets(t *testing.T) {
 		if p.Source != "bundled" || p.Version == "" || p.Description == "" || p.Author == "" {
 			t.Errorf("incomplete summary: %+v", p)
 		}
-		if p.LayerOnly != (p.ID == "go-baseline") {
+		if p.LayerOnly != (p.ID == "go-baseline" || p.ID == "chimera-plugin-fixture") {
 			t.Errorf("%s LayerOnly = %v", p.ID, p.LayerOnly)
 		}
 	}

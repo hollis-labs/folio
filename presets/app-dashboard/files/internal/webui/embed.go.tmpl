@@ -1,3 +1,28 @@
+{{ if eq .inputs.gui_host "chimera" -}}
+// Package webui supplies embedded assets to the maintained Chimera host.
+package webui
+
+import (
+	"embed"
+	"io/fs"
+	"net/http"
+
+	"github.com/hollis-labs/chimera/host"
+)
+
+const BasePath = {{ quote .inputs.base_path }}
+
+//go:embed all:dist
+var embedded embed.FS
+
+func New(routes http.Handler) (*host.Host, error) {
+	assets, err := fs.Sub(embedded, "dist")
+	if err != nil {
+		return nil, err
+	}
+	return host.New(host.Config{Name: {{ quote .inputs.project_name }}, Assets: assets, BasePath: BasePath, Routes: routes})
+}
+{{ else -}}
 // Package webui embeds the built dashboard UI frontend and serves it through
 // the shared go-webui harness.
 package webui
@@ -38,3 +63,4 @@ func Mount(mux *http.ServeMux) {
 	mux.Handle(BasePath+"/", h)
 	mux.Handle(BasePath, h)
 }
+{{ end -}}

@@ -1,0 +1,24 @@
+folio_version: "0.1"
+id: chimera-plugin-fixture
+version: 1.0.0
+layer_only: true
+description: Explicit licensed main-origin fixture widget layer for the frozen Chimera app wrappers
+author: hollis-labs
+license: MIT
+inputs:
+  - name: project_name
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9_]*$"
+  - name: plugin_kind
+    type: enum
+    values: [dashboard, chat]
+    default: dashboard
+  - name: base_path
+    type: string
+    pattern: "^(/|(/[A-Za-z0-9_-]+)+)$"
+    default: /review
+files:
+  source: ./files
+  template_suffix: .tmpl
+  binary_extensions: [.tgz]

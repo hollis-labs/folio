@@ -1,6 +1,6 @@
 folio_version: "0.1"
 id: chat-app
-version: 1.0.0
+version: 1.1.0
 description: Chat app — design-kit and kit-chat React frontend served by a Go binary via go-webui
 author: hollis-labs
 license: MIT
@@ -25,20 +25,39 @@ inputs:
 
   - name: base_path
     type: string
+    pattern: "^(/|(/[A-Za-z0-9_-]+)+)$"
     default: /chat
     description: URL path the chat is mounted at — leading slash, no trailing slash (e.g. /chat)
+
+  - name: gui_host
+    type: enum
+    values: [go-webui, chimera]
+    default: go-webui
+    description: Maintained host opt-in; chimera uses an independently frozen published GUI lock, not design_kit_version ranges
+
+  - name: chimera_version
+    type: enum
+    values: [v0.0.0-20261008115211-389155313ee5]
+    default: v0.0.0-20261008115211-389155313ee5
+    description: Fixed maintained public host revision for the explicit chimera branch
+
+  - name: chimera_gui_recipe
+    type: enum
+    values: [design-0.4.0-react-19.3.0]
+    default: design-0.4.0-react-19.3.0
+    description: Fixed published dependency contract recorded with the exact frontend lock
 
   - name: design_kit_version
     type: string
     default: "0.4.0"
     pattern: "^[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
-    description: Published design-kit package version (npm semver, without a v prefix)
+    description: Legacy go-webui branch package version; chimera uses the explicit frozen chimera_gui_recipe
 
   - name: go_webui_version
     type: string
     default: v0.1.0
     pattern: "^v[0-9]+\\.[0-9]+\\.[0-9]+([-+].+)?$"
-    description: github.com/hollis-labs/go-webui module version (v-prefixed semver)
+    description: Legacy go-webui branch module version; chimera uses the explicit chimera_version
 
   - name: go_version
     type: string

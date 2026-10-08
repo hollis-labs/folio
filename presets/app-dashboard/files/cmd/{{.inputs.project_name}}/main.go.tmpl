@@ -1,3 +1,56 @@
+{{ if eq .inputs.gui_host "chimera" -}}
+// Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} dashboard UI.
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"{{ .computed.module_path }}/internal/webui"
+)
+
+func main() {
+	addr := listenAddr()
+
+	mux := http.NewServeMux()
+
+	// Same-origin API. The starter dashboard polls /api/health; replace
+	// this with your application's real endpoints.
+	mux.HandleFunc("/api/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	h, err := webui.New(mux)
+	if err != nil {
+		log.Fatal(err)
+	}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("{{ .computed.app_title }} listening on %s; UI base %s", listener.Addr(), webui.BasePath)
+	if err := h.Serve(ctx, listener); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func listenAddr() string {
+	if addr := os.Getenv("LISTEN_ADDR"); addr != "" {
+		return addr
+	}
+	return "127.0.0.1:8080"
+}
+{{ else -}}
 // Command {{ .inputs.project_name }} serves the {{ .computed.app_title }} dashboard UI.
 package main
 
@@ -37,3 +90,4 @@ func listenAddr() string {
 	}
 	return "127.0.0.1:8080"
 }
+{{ end -}}

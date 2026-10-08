@@ -10,8 +10,7 @@ re-rendered later (and, in a future release, synced when the preset evolves).
 ## Status
 
 v0.3 — composition slice. Folio ships several bundled presets (Go modules,
-libraries and service apps, a Nanite plugin, a design-kit dashboard app) plus one
-compose-only layer, `go-baseline`, that is not meant to be rendered on its own.
+libraries and service apps, a Nanite plugin, a design-kit dashboard app) plus compose-only layers that are not meant to be rendered on their own.
 Ask folio rather than this README which presets exist:
 
 ```sh
@@ -26,6 +25,35 @@ Add `--json` to either for machine-readable output. A preset marked `[layer]`
 `composes:`. Sync, post-render Hadron hooks, federated git-URL preset
 sources, and MCP / HTTP surfaces are deliberately deferred; see
 [`CHANGELOG.md`](./CHANGELOG.md) for the full deferred list.
+
+## Maintained GUI host opt-in
+
+`app-dashboard` 2.1 and `chat-app` 1.1 retain `gui_host=go-webui` by default.
+Select `gui_host=chimera` for the thin public maintained Go host and the frozen
+published GUI recipe. Its `chimera_version` and `chimera_gui_recipe` inputs are
+finite tested pins; legacy `go_webui_version`/`design_kit_version` apply only to
+the legacy branch. The rendered frontend lock names match the project name;
+run `npm ci` explicitly on Node 22.12+ before the Go build. Folio never installs,
+builds or runs a rendered project. Canonical `/` and `/review` mounts share
+root-owned `/api/*` endpoints; host-reserved API/plugin/health bases are unavailable.
+
+For the separately licensed reviewed local widget, choose
+`app-dashboard-chimera-plugin` or `chat-app-chimera-plugin`. These compose the
+base app plus the explicit `chimera-plugin-fixture` layer; shell/default outputs
+contain none of its archive, vendor adapters or fixture code. The opt-in output
+carries the unchanged MIT host-ui archive, four immutable MIT Chimera adapters,
+individual raw SHA256/source provenance and the generation-bound fixture. The
+raw archive digest is separate from Folio's LF-normalized breadcrumb digest.
+This is an explicit reviewed main-origin local widget policy, not untrusted
+plugin isolation or an npm frontend release. Local count/unload affects only
+presentation; no business actions are supplied.
+
+The maintained Go pin is `v0.0.0-20261008115211-389155313ee5`;
+GUI recipe `design-0.4.0-react-19.3.0` retains accepted shared resolved packages
+and adds the existing Folio kit/lint closure. `scripts/check-chimera-consumers.cjs`
+is an explicit maintainer network/build/native proof, separate from rendering.
+It materializes root/subpath dashboard/chat consumers, checks checksums/locks,
+compiles them and exercises desktop/narrow/short-height native controls.
 
 ## Quickstart
 

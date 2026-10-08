@@ -1,0 +1,23 @@
+# Explicit reviewed plugin fixture
+
+This wrapper composes the maintained Chimera shell and the licensed finite
+`chimera-plugin-fixture` layer. Run the same explicit `npm ci`/typecheck/lint/build
+and Go build commands in README; rendering performs no install/build/run.
+The actual archive is carried in `third_party`, with raw SHA256/full MIT/source
+notice, and the four byte-identical pinned adapters are recorded individually
+in `plugin-provenance.json`. They are a source-distribution closure, not a public
+frontend package. Formatting skips only those immutable vendor bytes; consumer
+typecheck/build still verifies their actual imports.
+
+One app-owned immutable generation g1 registry/bundle is served under root
+`/plugins/registry` and `/plugins/recipe/g1/...`; it renders only in the declared
+recipe.summary widget slot. React and Button are shared through the reviewed
+Vite import map, never a parallel loader. Policy explicitly admits this reviewed
+main-origin fixture; no sandbox/opaque-frame or untrusted plugin claim. Local
+widget count/unload only affect transient presentation. The app APIs/health/chat
+remain app-owned. There is no install/enable/business action/backend mutation.
+
+The stylesheet lease removes only this fixture's generation-bound style on
+unload or disposal. Use maintained APIs and a separately reviewed admission and
+isolation policy for real plugins; do not replace the explicit review policy
+with a silent main-origin fallback. Upgrades/publication remain separate work.
